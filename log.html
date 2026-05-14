@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Shred System — Log</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="/css/shared.css"/>
+</head>
+<body>
+<div class="page-header">
+  <div class="page-title">Log</div>
+  <div id="monthLabel" style="font-size:12px;color:var(--muted)"></div>
+</div>
+
+<div class="wrap">
+  <div class="loader" id="loader"><div class="spinner"></div></div>
+  <div id="content" style="display:none">
+
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">Daily entry</div>
+        <div style="font-size:12px;color:var(--muted)" id="todayLabel"></div>
+      </div>
+      <div style="display:flex;gap:6px;margin-bottom:6px">
+        <input id="aiIn" style="flex:1;font-size:13px;padding:10px 12px;background:var(--input-bg,#1a1a1a);border:0.5px solid var(--border);color:var(--white);font-family:'DM Sans',sans-serif;outline:none" placeholder='"215lbs, 1800 cal, burned 3800, 210p 140c 60f, 9k steps"'/>
+        <button class="btn btn-accent btn-sm" onclick="parseAI()">Parse</button>
+      </div>
+      <div style="font-size:11px;color:rgba(255,255,255,0.25);margin-bottom:1rem">Type naturally or fill the fields below</div>
+      <div class="form-grid">
+        <div class="form-group"><label>Date</label><input type="date" id="fDate"/></div>
+        <div class="form-group"><label>Weight (lbs)</label><input type="number" id="fWt" placeholder="215" step="0.1"/></div>
+        <div class="form-group"><label>Cal consumed</label><input type="number" id="fIn" placeholder="1800"/></div>
+        <div class="form-group"><label>Cal burned</label><input type="number" id="fOut" placeholder="3800"/></div>
+        <div class="form-group"><label>Protein (g)</label><input type="number" id="fProt" placeholder="210"/></div>
+        <div class="form-group"><label>Carbs (g)</label><input type="number" id="fCarbs" placeholder="140"/></div>
+        <div class="form-group"><label>Fat (g)</label><input type="number" id="fFat" placeholder="60"/></div>
+        <div class="form-group"><label>Steps</label><input type="number" id="fSteps" placeholder="9000"/></div>
+        <div class="form-group full"><label>Notes (workouts, cardio, etc.)</label><textarea id="fNotes" placeholder="100 pull-ups | 30min stair master"></textarea></div>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-accent" onclick="saveDay()">Save entry</button>
+        <button class="btn" onclick="clearForm()">Clear</button>
+      </div>
+    </div>
+
+    <!-- Computed for today -->
+    <div class="stat-grid" id="todayStats" style="display:none">
+      <div class="stat-card"><div class="stat-label">Today's deficit</div><div class="stat-val" id="tDef">—</div></div>
+      <div class="stat-card"><div class="stat-label">Protein / lb</div><div class="stat-val" id="tProt">—</div></div>
+    </div>
+
+    <!-- Log history -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">This month</div>
+        <div style="font-size:12px;color:var(--muted)" id="monthStats"></div>
+      </div>
+      <div class="hist-wrap">
+        <table class="hist-table">
+          <thead><tr>
+            <th style="text-align:left">Date</th>
+            <th>Wt</th><th>In</th><th>Out</th>
+            <th>Deficit</th><th>P/lb</th><th>Steps</th><th>Est lbs</th>
+          </tr></thead>
+          <tbody id="histBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script src="/js/config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="/js/auth.js"></script>
+<script src="/js/nav.js"></script>
+<script src="/js/levels.js"></script>
+<script>
+const sb = getClient();
+const now = new Date();
+const curMK = monthKey();
+document.getElementById('monthLabel').textContent = monthLabel(curMK);
+document.getElementById('todayLabel').textContent = now.toLocaleDateString('en-US',{month:'short',day:'numeric'});
+document.getElementById('fDate').value = now.toISOString().split('T')[0];
+
+let uid, profile, allRows=[];
+
+(async()=>{
+  const session = await requireAuth();
+  if(!session) return;
+  uid = session.user.id;
+  profile = await getProfile();
+  if(!profile?.name) { window.location.href='/onboarding.html'; return; }
+
+  await loadLogs();
+  document.getElementById('loader').style.display='none';
+  document.getElementById('content').style.display='block';
+  injectNav('log');
+
+  // prefill today if exists
+  const todayStr = now.toISOString().split('T')[0];
+  const te = allRows.find(r=>r.date===todayStr);
+  if(te) prefillForm(te);
+})();
+
+async function loadLogs() {
+  const {data:logs} = await sb.from('daily_logs').select('*').eq('user_id',uid).eq('month_key',curMK).order('date',{ascending:true});
+  allRows = computeRows(logs||[]);
+  renderHistory();
+}
+
+function prefillForm(e) {
+  if(e.weight) document.getElementById('fWt').value=e.weight;
+  if(e.cal_in) document.getElementById('fIn').value=e.cal_in;
+  if(e.cal_out) document.getElementById('fOut').value=e.cal_out;
+  if(e.protein) document.getElementById('fProt').value=e.protein;
+  if(e.carbs) document.getElementById('fCarbs').value=e.carbs;
+  if(e.fat) document.getElementById('fFat').value=e.fat;
+  if(e.steps) document.getElementById('fSteps').value=e.steps;
+  if(e.notes) document.getElementById('fNotes').value=e.notes;
+}
+
+function parseAI() {
+  const t = document.getElementById('aiIn').value;
+  const wt=t.match(/(\d+\.?\d*)\s*lbs?/i);
+  const prot=t.match(/(\d+)\s*p(?!\.)/i)||t.match(/protein[:\s]+(\d+)/i);
+  const carbs=t.match(/(\d+)\s*c(?!al)/i);
+  const fat=t.match(/(\d+)\s*f(?!\w)/i);
+  const steps=t.match(/(\d[\d,]*)\s*(?:k\s*)?steps?/i);
+  const nums=(t.match(/\d{3,5}/g)||[]).filter(n=>parseInt(n)>500&&parseInt(n)<9999);
+  if(wt)document.getElementById('fWt').value=wt[1];
+  if(prot)document.getElementById('fProt').value=prot[1];
+  if(carbs)document.getElementById('fCarbs').value=carbs[1];
+  if(fat)document.getElementById('fFat').value=fat[1];
+  if(steps)document.getElementById('fSteps').value=steps[1].replace(/,/g,'');
+  if(nums.length>=2){document.getElementById('fIn').value=nums[0];document.getElementById('fOut').value=nums[1];}
+  document.getElementById('aiIn').value='';
+}
+
+async function saveDay() {
+  const date=document.getElementById('fDate').value;
+  if(!date){toast('Pick a date first','error');return;}
+  const entry={
+    user_id:uid, date, month_key:monthKey(new Date(date+'T12:00:00')),
+    weight:parseFloat(document.getElementById('fWt').value)||null,
+    cal_in:parseInt(document.getElementById('fIn').value)||null,
+    cal_out:parseInt(document.getElementById('fOut').value)||null,
+    protein:parseInt(document.getElementById('fProt').value)||null,
+    carbs:parseInt(document.getElementById('fCarbs').value)||null,
+    fat:parseInt(document.getElementById('fFat').value)||null,
+    steps:parseInt(document.getElementById('fSteps').value)||null,
+    notes:document.getElementById('fNotes').value||null
+  };
+
+  const {error} = await sb.from('daily_logs').upsert(entry,{onConflict:'user_id,date'});
+  if(error){toast('Error saving — try again','error');console.error(error);return;}
+
+  // check level up
+  await checkAndLevelUp();
+  toast('Saved');
+  await loadLogs();
+}
+
+async function checkAndLevelUp() {
+  const pf = await getProfile();
+  const ld = genLevel(pf.current_level||1);
+  const allDone = ld.goals.every(g=>goalProgress(g,allRows).done);
+  if(allDone) {
+    const newLevel = (pf.current_level||1)+1;
+    await sb.from('profiles').update({current_level:newLevel}).eq('id',uid);
+    toast(`Level ${newLevel} unlocked!`);
+  }
+}
+
+function clearForm() {
+  ['fWt','fIn','fOut','fProt','fCarbs','fFat','fSteps'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('fNotes').value='';
+}
+
+function renderHistory() {
+  const tb=document.getElementById('histBody');
+  if(!allRows.length){tb.innerHTML='<tr><td colspan="8" style="padding:2rem;text-align:center;color:var(--muted)">No entries yet this month</td></tr>';return;}
+  tb.innerHTML=[...allRows].reverse().map(r=>{
+    const d=new Date(r.date+'T12:00:00');
+    const lbl=d.toLocaleDateString('en-US',{month:'short',day:'numeric'});
+    const dc=r.deficit==null?'':r.deficit>=0?'color:var(--good)':'color:var(--bad)';
+    const pc=r.protPerLb==null?'':r.protPerLb>=1?'color:var(--good)':r.protPerLb>=0.8?'color:var(--warn)':'color:var(--bad)';
+    return`<tr>
+      <td>${lbl}</td>
+      <td>${r.weight??'—'}</td>
+      <td>${r.cal_in!=null?r.cal_in.toLocaleString():'—'}</td>
+      <td>${r.cal_out!=null?r.cal_out.toLocaleString():'—'}</td>
+      <td style="${dc}">${r.deficit!=null?(r.deficit>0?'+':'')+r.deficit.toLocaleString():'—'}</td>
+      <td style="${pc}">${r.protPerLb!=null?r.protPerLb.toFixed(2):'—'}</td>
+      <td>${r.steps!=null?r.steps.toLocaleString():'—'}</td>
+      <td>${r.estLbs.toFixed(2)}</td>
+    </tr>`;
+  }).join('');
+
+  const dr=allRows.filter(r=>r.deficit!=null);
+  const avgDef=dr.length?Math.round(dr.reduce((a,r)=>a+r.deficit,0)/dr.length):0;
+  document.getElementById('monthStats').textContent=`Avg ${avgDef.toLocaleString()} cal deficit/day`;
+}
+</script>
+</body>
+</html>

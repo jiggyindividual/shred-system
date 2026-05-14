@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Shred System — Progress</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="/css/shared.css"/>
+<style>
+.chart-wrap{position:relative;width:100%;height:220px;margin-bottom:1rem}
+.chart-tab-row{display:flex;gap:4px;margin-bottom:0.75rem;flex-wrap:wrap}
+.ctab{font-size:11px;padding:5px 12px;border:0.5px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;font-family:'DM Sans',sans-serif;letter-spacing:0.04em;transition:all 0.2s}
+.ctab.active{background:var(--accent);color:var(--black);border-color:var(--accent);font-weight:500}
+.archive-card{background:var(--card);border:0.5px solid var(--border);padding:1rem;margin-bottom:8px}
+.archive-month{font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:0.04em;margin-bottom:4px}
+.archive-stats{display:flex;gap:1.5rem;flex-wrap:wrap}
+.arch-stat{font-size:12px;color:var(--muted)}
+.arch-stat span{color:var(--white);font-weight:500}
+</style>
+</head>
+<body>
+<div class="page-header">
+  <div class="page-title">Progress</div>
+  <div id="monthLabel" style="font-size:12px;color:var(--muted)"></div>
+</div>
+
+<div class="wrap">
+  <div class="loader" id="loader"><div class="spinner"></div></div>
+  <div id="content" style="display:none">
+
+    <div class="stat-grid">
+      <div class="stat-card"><div class="stat-label">Avg deficit</div><div class="stat-val" id="sAvgDef">—</div><div class="stat-sub" style="color:var(--muted);font-size:11px">cal/day</div></div>
+      <div class="stat-card"><div class="stat-label">Est. lbs lost</div><div class="stat-val" id="sEstLbs">—</div><div class="stat-sub" style="color:var(--muted);font-size:11px">this month</div></div>
+      <div class="stat-card"><div class="stat-label">Deficit eff.</div><div class="stat-val" id="sEff">—</div><div class="stat-sub" id="sEffSub" style="font-size:11px"></div></div>
+      <div class="stat-card"><div class="stat-label">Lean mass</div><div class="stat-val" id="sLean">—</div><div class="stat-sub" id="sLeanSub" style="font-size:11px"></div></div>
+      <div class="stat-card"><div class="stat-label">Avg protein/lb</div><div class="stat-val" id="sAvgProt">—</div><div class="stat-sub" id="sProtSub" style="font-size:11px"></div></div>
+      <div class="stat-card"><div class="stat-label">Avg steps</div><div class="stat-val" id="sSteps">—</div><div class="stat-sub" style="color:var(--muted);font-size:11px">per day</div></div>
+    </div>
+
+    <div class="card">
+      <div class="card-header" style="margin-bottom:0.75rem">
+        <div class="card-title">Charts</div>
+      </div>
+      <div class="chart-tab-row">
+        <button class="ctab active" onclick="switchChart('weight',this)">Weight</button>
+        <button class="ctab" onclick="switchChart('deficit',this)">Deficit</button>
+        <button class="ctab" onclick="switchChart('cumulative',this)">Cumulative</button>
+        <button class="ctab" onclick="switchChart('protein',this)">Protein/lb</button>
+        <button class="ctab" onclick="switchChart('steps',this)">Steps</button>
+        <button class="ctab" onclick="switchChart('macros',this)">Macros</button>
+      </div>
+      <div class="chart-wrap"><canvas id="mainChart" role="img" aria-label="Recomposition chart">No data.</canvas></div>
+    </div>
+
+    <!-- Week breakdown -->
+    <div class="card">
+      <div class="card-title" style="margin-bottom:1rem">Week breakdown</div>
+      <div id="weekBreakdown"></div>
+    </div>
+
+    <!-- Archives -->
+    <div class="card">
+      <div class="card-title" style="margin-bottom:1rem">Monthly archives</div>
+      <div id="archives"><div class="empty"><div class="empty-icon">📁</div>No past months yet</div></div>
+    </div>
+
+  </div>
+</div>
+
+<script src="/js/config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script src="/js/auth.js"></script>
+<script src="/js/nav.js"></script>
+<script src="/js/levels.js"></script>
+<script>
+const sb=getClient();
+const now=new Date();
+const curMK=monthKey();
+document.getElementById('monthLabel').textContent=monthLabel(curMK);
+let chartInst=null, rows=[];
+
+(async()=>{
+  const session=await requireAuth();if(!session)return;
+  const uid=session.user.id;
+  const profile=await getProfile();
+  if(!profile?.name){window.location.href='/onboarding.html';return;}
+
+  const {data:logs}=await sb.from('daily_logs').select('*').eq('user_id',uid).eq('month_key',curMK).order('date',{ascending:true});
+  rows=computeRows(logs||[]);
+  renderStats();
+  renderChart('weight');
+  renderWeeks();
+
+  const {data:arcs}=await sb.from('monthly_archives').select('*').eq('user_id',uid).order('month_key',{ascending:false});
+  renderArchives(arcs||[]);
+
+  document.getElementById('loader').style.display='none';
+  document.getElementById('content').style.display='block';
+  injectNav('progress');
+})();
+
+function renderStats() {
+  const s=computeMonthStats(rows);
+  document.getElementById('sAvgDef').textContent=s.avgDef?s.avgDef.toLocaleString():'—';
+  document.getElementById('sEstLbs').innerHTML=Math.abs(s.estLbs).toFixed(1)+'<span class="stat-unit">lbs</span>';
+  const ee=document.getElementById('sEff'),es=document.getElementById('sEffSub');
+  if(s.effPct!=null){ee.innerHTML=s.effPct+'<span class="stat-unit">%</span>';const c=s.effPct<=10?'good':s.effPct<=20?'warn':'bad';es.className='stat-sub '+c;es.textContent=s.effPct<=10?'Dialed in':s.effPct<=20?'Close':'Check tracking';}
+  else{ee.textContent='—';es.textContent='Need 2+ weight entries';}
+  const le=document.getElementById('sLean'),ls=document.getElementById('sLeanSub');
+  if(s.leanScore!=null){le.innerHTML=s.leanScore+'<span class="stat-unit">%</span>';const c=s.leanScore>=85?'good':s.leanScore>=70?'warn':'bad';ls.className='stat-sub '+c;ls.textContent=s.leanScore>=85?'Preserved':s.leanScore>=70?'Moderate':'At risk';}
+  else{le.textContent='—';ls.textContent='';}
+  const pe=document.getElementById('sAvgProt'),ps=document.getElementById('sProtSub');
+  if(s.avgProt){pe.innerHTML=s.avgProt+'<span class="stat-unit">g/lb</span>';const c=s.avgProt>=1?'good':s.avgProt>=0.8?'warn':'bad';ps.className='stat-sub '+c;ps.textContent=s.avgProt>=1?'On target':'Below target';}
+  else{pe.textContent='—';ps.textContent='';}
+  document.getElementById('sSteps').textContent=s.avgSteps?s.avgSteps.toLocaleString():'—';
+}
+
+function renderChart(type) {
+  const canvas=document.getElementById('mainChart');
+  if(chartInst){chartInst.destroy();chartInst=null;}
+  if(!rows.length)return;
+  const labels=rows.map(r=>{const d=new Date(r.date+'T12:00:00');return d.toLocaleDateString('en-US',{month:'short',day:'numeric'});});
+  const co={responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{color:'#555',font:{size:10}},grid:{color:'rgba(255,255,255,0.04)'}},y:{ticks:{color:'#555',font:{size:10}},grid:{color:'rgba(255,255,255,0.04)'}}}};
+  let cfg;
+  if(type==='weight'){cfg={type:'line',data:{labels,datasets:[{label:'Weight',data:rows.map(r=>r.weight),borderColor:'#c8ff00',backgroundColor:'rgba(200,255,0,0.05)',tension:0.3,fill:true,pointRadius:3,spanGaps:true,pointBorderColor:'#c8ff00',pointBackgroundColor:'#0a0a0a'}]},options:{...co,scales:{...co.scales,y:{...co.scales.y,ticks:{...co.scales.y.ticks,callback:v=>v+'lb'}}}}};}
+  else if(type==='deficit'){const vals=rows.map(r=>r.deficit);cfg={type:'bar',data:{labels,datasets:[{data:vals,backgroundColor:vals.map(v=>v==null?'transparent':v>=0?'rgba(93,202,165,0.7)':'rgba(240,149,149,0.7)')}]},options:{...co,scales:{...co.scales,y:{...co.scales.y,ticks:{...co.scales.y.ticks,callback:v=>v.toLocaleString()}}}}};}
+  else if(type==='cumulative'){cfg={type:'line',data:{labels,datasets:[{label:'Cum deficit',data:rows.map(r=>r.cumDef),borderColor:'#AFA9EC',backgroundColor:'rgba(175,169,236,0.05)',tension:0.3,fill:true,pointRadius:2,yAxisID:'y'},{label:'Est lbs',data:rows.map(r=>+r.estLbs.toFixed(2)),borderColor:'#5DCAA5',borderDash:[4,3],tension:0.3,pointRadius:2,yAxisID:'y2'}]},options:{...co,plugins:{legend:{display:true,labels:{color:'#666',boxWidth:10,font:{size:11}}}},scales:{x:co.scales.x,y:{position:'left',ticks:{color:'#555',font:{size:10},callback:v=>v.toLocaleString()},grid:{color:'rgba(255,255,255,0.04)'}},y2:{position:'right',grid:{drawOnChartArea:false},ticks:{color:'#555',font:{size:10},callback:v=>v+'lb'}}}}};}
+  else if(type==='protein'){cfg={type:'line',data:{labels,datasets:[{label:'Protein/lb',data:rows.map(r=>r.protPerLb),borderColor:'#c8ff00',backgroundColor:'rgba(200,255,0,0.05)',tension:0.3,fill:true,pointRadius:3,spanGaps:true},{label:'1g/lb target',data:rows.map(()=>1.0),borderColor:'rgba(240,149,149,0.4)',borderDash:[4,3],pointRadius:0,borderWidth:1}]},options:{...co,plugins:{legend:{display:false}},scales:{...co.scales,y:{...co.scales.y,ticks:{...co.scales.y.ticks,callback:v=>v.toFixed(1)+'g'}}}}};}
+  else if(type==='steps'){cfg={type:'bar',data:{labels,datasets:[{data:rows.map(r=>r.steps),backgroundColor:rows.map(r=>r.steps==null?'transparent':r.steps>=10000?'rgba(93,202,165,0.7)':r.steps>=8000?'rgba(239,159,39,0.7)':'rgba(240,149,149,0.6)')}]},options:{...co,scales:{...co.scales,y:{...co.scales.y,ticks:{...co.scales.y.ticks,callback:v=>v.toLocaleString()}}}}};}
+  else if(type==='macros'){cfg={type:'bar',data:{labels,datasets:[{label:'Protein',data:rows.map(r=>r.protein),backgroundColor:'rgba(93,202,165,0.7)',stack:'m'},{label:'Carbs',data:rows.map(r=>r.carbs),backgroundColor:'rgba(239,159,39,0.7)',stack:'m'},{label:'Fat',data:rows.map(r=>r.fat),backgroundColor:'rgba(240,149,149,0.6)',stack:'m'}]},options:{...co,plugins:{legend:{display:true,labels:{color:'#666',boxWidth:10,font:{size:11}}}},scales:{x:{...co.scales.x,stacked:true},y:{...co.scales.y,stacked:true}}}};}
+  chartInst=new Chart(canvas,cfg);
+}
+
+function renderWeeks() {
+  const wb=document.getElementById('weekBreakdown');
+  if(!rows.length){wb.innerHTML='<div class="empty" style="padding:1rem">No data yet</div>';return;}
+  const weeks={};
+  rows.forEach(r=>{
+    const d=new Date(r.date+'T12:00:00');
+    const wk=`Week ${Math.ceil(d.getDate()/7)}`;
+    if(!weeks[wk])weeks[wk]={defs:[],steps:[],prots:[]};
+    if(r.deficit!=null)weeks[wk].defs.push(r.deficit);
+    if(r.steps!=null)weeks[wk].steps.push(r.steps);
+    if(r.protPerLb!=null)weeks[wk].prots.push(r.protPerLb);
+  });
+  wb.innerHTML=Object.entries(weeks).map(([wk,d])=>{
+    const avgD=d.defs.length?Math.round(d.defs.reduce((a,v)=>a+v,0)/d.defs.length):null;
+    const avgS=d.steps.length?Math.round(d.steps.reduce((a,v)=>a+v,0)/d.steps.length):null;
+    const avgP=d.prots.length?(d.prots.reduce((a,v)=>a+v,0)/d.prots.length).toFixed(2):null;
+    const defCol=avgD==null?'':avgD>=1000?'var(--good)':avgD>=500?'var(--warn)':'var(--bad)';
+    return`<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:0.5px solid var(--border)">
+      <div style="font-size:13px;color:var(--muted)">${wk}</div>
+      <div style="display:flex;gap:1.5rem;font-size:12px">
+        <span style="color:${defCol}">${avgD!=null?avgD.toLocaleString()+' def':'—'}</span>
+        <span style="color:var(--muted)">${avgS!=null?avgS.toLocaleString()+' steps':'—'}</span>
+        <span style="color:${avgP>=1?'var(--good)':avgP>=0.8?'var(--warn)':'var(--muted)'}">${avgP?avgP+'g/lb':'—'}</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderArchives(arcs) {
+  const el=document.getElementById('archives');
+  if(!arcs.length){el.innerHTML='<div class="empty"><div>No past months yet</div></div>';return;}
+  el.innerHTML=arcs.map(a=>`
+    <div class="archive-card">
+      <div class="archive-month">${monthLabel(a.month_key)}</div>
+      <div class="archive-stats">
+        <div class="arch-stat">Deficit <span>${(a.total_deficit||0).toLocaleString()} cal</span></div>
+        <div class="arch-stat">Est lost <span>${(a.est_lbs_lost||0).toFixed(1)} lbs</span></div>
+        <div class="arch-stat">Consistency <span>${a.consistency_pct||0}%</span></div>
+        <div class="arch-stat">Best streak <span>${a.best_step_streak||0}d</span></div>
+        <div class="arch-stat">Avg prot <span>${a.avg_protein_per_lb||'—'}g/lb</span></div>
+      </div>
+    </div>`).join('');
+}
+
+function switchChart(type,el){
+  document.querySelectorAll('.ctab').forEach(b=>b.classList.remove('active'));
+  el.classList.add('active');
+  renderChart(type);
+}
+</script>
+</body>
+</html>

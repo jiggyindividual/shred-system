@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Shred System — Levels</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="/css/shared.css"/>
+<style>
+.level-hero-card{background:var(--card);border:0.5px solid var(--border);padding:1.5rem;margin-bottom:1rem;position:relative;overflow:hidden}
+.level-hero-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--accent)}
+.lvl-big{font-family:'Bebas Neue',sans-serif;font-size:72px;line-height:1;color:var(--accent)}
+.lvl-name{font-size:14px;color:var(--muted);margin-top:2px;letter-spacing:0.04em}
+.goals-pct{text-align:right}
+.goals-pct-num{font-family:'Bebas Neue',sans-serif;font-size:48px;color:var(--white);line-height:1}
+.goals-pct-label{font-size:10px;letter-spacing:0.08em;text-transform:uppercase;color:var(--muted);margin-top:2px}
+.ladder-item{padding:1rem;border:0.5px solid var(--border);background:var(--card);margin-bottom:6px;transition:border-color 0.2s}
+.ladder-item.current{border-color:rgba(200,255,0,0.5)}
+.ladder-item.locked{opacity:0.4}
+.ladder-item.done{border-color:rgba(93,202,165,0.3)}
+.li-header{display:flex;align-items:center;justify-content:space-between}
+.li-title{font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:0.04em}
+.li-badge{font-size:10px;padding:2px 8px;letter-spacing:0.08em;text-transform:uppercase}
+.li-sub{font-size:11px;color:var(--muted);margin-top:4px}
+.li-goals{margin-top:0.75rem;display:flex;flex-direction:column;gap:6px}
+.li-goal{display:flex;align-items:center;gap:8px;font-size:12px;color:rgba(255,255,255,0.6)}
+.li-dot{width:4px;height:4px;border-radius:50%;background:var(--accent);flex-shrink:0}
+</style>
+</head>
+<body>
+<div class="page-header">
+  <div class="page-title">Levels</div>
+  <div id="monthLabel" style="font-size:12px;color:var(--muted)"></div>
+</div>
+
+<div class="wrap">
+  <div class="loader" id="loader"><div class="spinner"></div></div>
+  <div id="content" style="display:none">
+
+    <!-- Current level hero -->
+    <div class="level-hero-card">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:1rem">
+        <div>
+          <div class="lvl-big">LVL <span id="lvlNum">1</span></div>
+          <div class="lvl-name" id="lvlName"></div>
+          <div class="level-badge" id="lvlTier" style="margin-top:6px"></div>
+        </div>
+        <div class="goals-pct">
+          <div class="goals-pct-num"><span id="goalsDone">0</span>/<span id="goalsTotal">0</span></div>
+          <div class="goals-pct-label">Goals done</div>
+        </div>
+      </div>
+      <div class="xp-track"><div class="xp-fill" id="xpFill" style="width:0%"></div></div>
+      <div class="xp-row"><span>Progress to Level <span id="nextLvl">2</span></span><span id="xpPct">0%</span></div>
+    </div>
+
+    <!-- Current goals -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">Current goals</div>
+        <div style="font-size:12px;color:var(--muted)" id="goalsPct"></div>
+      </div>
+      <div id="goalsList"></div>
+    </div>
+
+    <!-- Full ladder -->
+    <div class="card-title" style="margin-bottom:0.75rem">Your ladder</div>
+    <div id="ladder"></div>
+
+  </div>
+</div>
+
+<script src="/js/config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="/js/auth.js"></script>
+<script src="/js/nav.js"></script>
+<script src="/js/levels.js"></script>
+<script>
+const sb=getClient();
+const curMK=monthKey();
+document.getElementById('monthLabel').textContent=monthLabel(curMK);
+
+(async()=>{
+  const session=await requireAuth();if(!session)return;
+  const uid=session.user.id;
+  const profile=await getProfile();
+  if(!profile?.name){window.location.href='/onboarding.html';return;}
+
+  const {data:logs}=await sb.from('daily_logs').select('*').eq('user_id',uid).eq('month_key',curMK).order('date',{ascending:true});
+  const rows=computeRows(logs||[]);
+  const level=profile.current_level||1;
+  const ld=genLevel(level);
+
+  document.getElementById('lvlNum').textContent=level;
+  document.getElementById('lvlName').textContent=ld.name;
+  document.getElementById('nextLvl').textContent=level+1;
+  const te=document.getElementById('lvlTier');
+  te.textContent=ld.tier;te.className='level-badge '+tierClass(ld.tier);
+
+  const grs=ld.goals.map(g=>({g,r:goalProgress(g,rows)}));
+  const done=grs.filter(x=>x.r.done).length;
+  const xp=Math.round(done/ld.goals.length*100);
+  document.getElementById('goalsDone').textContent=done;
+  document.getElementById('goalsTotal').textContent=ld.goals.length;
+  document.getElementById('xpFill').style.width=xp+'%';
+  document.getElementById('xpPct').textContent=xp+'%';
+  document.getElementById('goalsPct').textContent=xp+'% complete';
+
+  renderGoalsList(document.getElementById('goalsList'),ld.goals,rows);
+  renderLadder(level,rows);
+
+  document.getElementById('loader').style.display='none';
+  document.getElementById('content').style.display='block';
+  injectNav('levels');
+})();
+
+function renderLadder(current, rows) {
+  const el=document.getElementById('ladder');
+  const maxShow=Math.min(current+4,20);
+  el.innerHTML=Array.from({length:maxShow},(_,i)=>i+1).map(n=>{
+    const ld=genLevel(n);
+    const isCur=n===current, isLocked=n>current, isDone=n<current;
+    const tc=tierClass(ld.tier);
+    let statusText='';
+    if(isCur) statusText=`${ld.goals.length} goals to complete`;
+    else if(isLocked) statusText=`Complete level ${n-1} first`;
+    else statusText='Completed';
+    return`<div class="ladder-item${isCur?' current':''}${isLocked?' locked':''}${isDone?' done':''}">
+      <div class="li-header">
+        <div class="li-title">${isDone?'✓ ':''}Level ${n} — ${ld.name}</div>
+        <div class="li-badge ${tc}">${ld.tier}</div>
+      </div>
+      <div class="li-sub">${statusText}</div>
+      ${isCur?`<div class="li-goals">${ld.goals.slice(0,3).map(g=>`<div class="li-goal"><div class="li-dot"></div>${g.label}</div>`).join('')}${ld.goals.length>3?`<div class="li-goal" style="color:var(--muted)">+${ld.goals.length-3} more goals</div>`:''}</div>`:''}
+    </div>`;
+  }).join('');
+}
+</script>
+</body>
+</html>

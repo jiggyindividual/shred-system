@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Shred System — Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="/css/shared.css"/>
+</head>
+<body>
+<div class="page-header">
+  <a href="/index.html" class="logo-link">Shred System</a>
+  <div id="monthLabel" style="font-size:12px;color:var(--muted)"></div>
+</div>
+
+<div class="wrap">
+  <div class="loader" id="loader"><div class="spinner"></div></div>
+  <div id="content" style="display:none">
+
+    <div style="margin-bottom:1.5rem">
+      <div style="font-size:13px;color:var(--muted);margin-bottom:2px">Good <span id="timeOfDay">morning</span>,</div>
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:36px;letter-spacing:0.04em" id="userName"></div>
+    </div>
+
+    <!-- Level card -->
+    <div class="card" style="margin-bottom:1rem">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:1rem">
+        <div>
+          <div style="font-family:'Bebas Neue',sans-serif;font-size:52px;color:var(--accent);line-height:1">LVL <span id="lvlNum">1</span></div>
+          <div style="font-size:13px;color:var(--muted);margin-top:2px" id="lvlName"></div>
+          <div class="level-badge" id="lvlTier" style="margin-top:6px"></div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-family:'Bebas Neue',sans-serif;font-size:36px;line-height:1"><span id="goalsDone">0</span>/<span id="goalsTotal">0</span></div>
+          <div style="font-size:10px;letter-spacing:0.08em;text-transform:uppercase;color:var(--muted);margin-top:2px">Goals done</div>
+        </div>
+      </div>
+      <div class="xp-track"><div class="xp-fill" id="xpFill" style="width:0%"></div></div>
+      <div class="xp-row"><span>To level <span id="nextLvl">2</span></span><span id="xpPct">0%</span></div>
+    </div>
+
+    <!-- Today's quick stats -->
+    <div class="stat-grid">
+      <div class="stat-card">
+        <div class="stat-label">Cum. deficit</div>
+        <div class="stat-val" id="sCumDef">—</div>
+        <div class="stat-sub" style="color:var(--muted);font-size:11px">calories total</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Est. lbs lost</div>
+        <div class="stat-val" id="sEstLbs">—</div>
+        <div class="stat-sub" style="color:var(--muted);font-size:11px">this month</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Protein / lb</div>
+        <div class="stat-val" id="sProtLb">—</div>
+        <div class="stat-sub" id="sProtSub" style="font-size:11px"></div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Step streak</div>
+        <div class="stat-val" id="sStreak">0<span class="stat-unit">d</span></div>
+        <div class="stat-sub" style="color:var(--muted);font-size:11px">above 8k steps</div>
+      </div>
+    </div>
+
+    <!-- Today log shortcut -->
+    <div class="card" id="todayCard">
+      <div class="card-header">
+        <div class="card-title">Today</div>
+        <div style="font-size:12px;color:var(--muted)" id="todayDate"></div>
+      </div>
+      <div id="todayLogged" style="display:none">
+        <div id="todaySummary" style="font-size:13px;color:rgba(255,255,255,0.6);line-height:1.8;margin-bottom:1rem"></div>
+        <a href="/log.html" class="btn btn-sm">Edit entry</a>
+      </div>
+      <div id="todayEmpty">
+        <div style="font-size:13px;color:var(--muted);margin-bottom:1rem">You haven't logged today yet.</div>
+        <a href="/log.html" class="btn btn-accent btn-full" style="display:block;text-align:center">Log today</a>
+      </div>
+    </div>
+
+    <!-- Consistency + lean mass -->
+    <div class="stat-grid">
+      <div class="stat-card">
+        <div class="stat-label">Consistency</div>
+        <div class="stat-val" id="sCons">—</div>
+        <div class="stat-sub" id="sConsSub" style="color:var(--muted);font-size:11px"></div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Lean mass score</div>
+        <div class="stat-val" id="sLean">—</div>
+        <div class="stat-sub" id="sLeanSub" style="font-size:11px"></div>
+      </div>
+    </div>
+
+    <!-- Monthly archive notice -->
+    <div id="archiveNotice" style="display:none" class="card" style="border-color:rgba(200,255,0,0.2)">
+      <div style="font-size:13px;color:var(--accent);margin-bottom:4px;font-weight:500">New month — new sheet</div>
+      <div style="font-size:12px;color:var(--muted)">Last month's data has been archived. Fresh start.</div>
+    </div>
+
+  </div>
+</div>
+
+<script src="/js/config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="/js/auth.js"></script>
+<script src="/js/nav.js"></script>
+<script src="/js/levels.js"></script>
+<script>
+const sb = getClient();
+const now = new Date();
+const curMonthKey = monthKey();
+document.getElementById('monthLabel').textContent = monthLabel(curMonthKey);
+document.getElementById('todayDate').textContent = now.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'});
+const hr = now.getHours();
+document.getElementById('timeOfDay').textContent = hr<12?'morning':hr<17?'afternoon':'evening';
+
+(async()=>{
+  const session = await requireAuth();
+  if(!session) return;
+  const uid = session.user.id;
+  const profile = await getProfile();
+  if(!profile?.name) { window.location.href='/onboarding.html'; return; }
+
+  document.getElementById('userName').textContent = profile.name.split(' ')[0].toUpperCase();
+
+  // check monthly archive
+  await checkMonthlyArchive(uid, profile);
+
+  // load this month's logs
+  const {data:logs} = await sb.from('daily_logs')
+    .select('*').eq('user_id',uid).eq('month_key',curMonthKey)
+    .order('date',{ascending:true});
+
+  const rows = computeRows(logs||[]);
+  renderDashboard(rows, profile);
+
+  document.getElementById('loader').style.display='none';
+  document.getElementById('content').style.display='block';
+  injectNav('dashboard');
+})();
+
+async function checkMonthlyArchive(uid, profile) {
+  const prevDate = new Date(now.getFullYear(), now.getMonth()-1, 1);
+  const prevKey = monthKey(prevDate);
+  const {data:arch} = await sb.from('monthly_archives').select('id').eq('user_id',uid).eq('month_key',prevKey).single();
+  if(!arch) {
+    const {data:prevLogs} = await sb.from('daily_logs').select('*').eq('user_id',uid).eq('month_key',prevKey);
+    if(prevLogs?.length > 0) {
+      const rows = computeRows(prevLogs);
+      const stats = computeMonthStats(rows);
+      await sb.from('monthly_archives').insert({
+        user_id:uid, month_key:prevKey,
+        level_start: profile.current_level,
+        level_end: profile.current_level,
+        total_deficit: stats.cumDef,
+        est_lbs_lost: stats.estLbs,
+        actual_lbs_lost: Math.abs(stats.wtChange||0),
+        avg_protein_per_lb: stats.avgProt,
+        best_step_streak: stats.stepStreak,
+        consistency_pct: stats.consistency,
+        snapshot: rows
+      });
+      document.getElementById('archiveNotice').style.display='block';
+    }
+  }
+}
+
+function renderDashboard(rows, profile) {
+  const last = rows[rows.length-1];
+  const ld = genLevel(profile.current_level||1);
+  document.getElementById('lvlNum').textContent = profile.current_level||1;
+  document.getElementById('lvlName').textContent = ld.name;
+  const te = document.getElementById('lvlTier');
+  te.textContent = ld.tier; te.className='level-badge '+tierClass(ld.tier);
+  document.getElementById('nextLvl').textContent = (profile.current_level||1)+1;
+
+  const grs = ld.goals.map(g=>goalProgress(g,rows));
+  const done = grs.filter(r=>r.done).length;
+  const xp = Math.round(done/ld.goals.length*100);
+  document.getElementById('goalsDone').textContent=done;
+  document.getElementById('goalsTotal').textContent=ld.goals.length;
+  document.getElementById('xpFill').style.width=xp+'%';
+  document.getElementById('xpPct').textContent=xp+'%';
+
+  const cumDef = last?.cumDef||0;
+  document.getElementById('sCumDef').innerHTML=rows.length?(cumDef/1000).toFixed(1)+'<span class="stat-unit">k</span>':'—';
+  document.getElementById('sEstLbs').innerHTML=rows.length?Math.abs(cumDef/3500).toFixed(1)+'<span class="stat-unit">lbs</span>':'—';
+
+  const pl = last?.protPerLb;
+  const pe=document.getElementById('sProtLb'),ps=document.getElementById('sProtSub');
+  if(pl!=null){pe.innerHTML=pl.toFixed(2)+'<span class="stat-unit">g</span>';const c=pl>=1?'good':pl>=0.8?'warn':'bad';ps.className='stat-sub '+c;ps.textContent=pl>=1?'On target':pl>=0.8?'Close':'Below target';}
+  else{pe.textContent='—';ps.textContent='';}
+
+  let streak=0;for(let i=rows.length-1;i>=0;i--){if(rows[i].steps!=null&&rows[i].steps>=8000)streak++;else break;}
+  document.getElementById('sStreak').innerHTML=streak+'<span class="stat-unit">d</span>';
+
+  const logged=rows.filter(r=>r.cal_in!=null||r.weight!=null).length;
+  const dim=new Date(now.getFullYear(),now.getMonth()+1,0).getDate();
+  const cons=Math.round(logged/dim*100);
+  document.getElementById('sCons').innerHTML=cons+'<span class="stat-unit">%</span>';
+  document.getElementById('sConsSub').textContent=`${logged}/${dim} days logged`;
+
+  const pr=rows.filter(r=>r.protPerLb!=null);
+  const dr=rows.filter(r=>r.deficit!=null);
+  const ap=pr.length?pr.reduce((a,r)=>a+r.protPerLb,0)/pr.length:0;
+  const adf=dr.length?dr.reduce((a,r)=>a+r.deficit,0)/dr.length:0;
+  const ls=pr.length?Math.round(Math.min(100,ap*80)*0.6+Math.min(100,adf>0?Math.min(100,adf/2000*50+50):0)*0.4):null;
+  const le=document.getElementById('sLean'),lsub=document.getElementById('sLeanSub');
+  if(ls!=null){le.innerHTML=ls+'<span class="stat-unit">%</span>';const c=ls>=85?'good':ls>=70?'warn':'bad';lsub.className='stat-sub '+c;lsub.textContent=ls>=85?'Muscle preserved':ls>=70?'Moderate':'Muscle at risk';}
+  else{le.textContent='—';lsub.textContent='';}
+
+  // today's entry
+  const todayStr = now.toISOString().split('T')[0];
+  const todayEntry = rows.find(r=>r.date===todayStr);
+  if(todayEntry){
+    const parts=[];
+    if(todayEntry.weight!=null) parts.push(`${todayEntry.weight} lbs`);
+    if(todayEntry.cal_in!=null) parts.push(`${todayEntry.cal_in.toLocaleString()} cal in`);
+    if(todayEntry.cal_out!=null) parts.push(`${todayEntry.cal_out.toLocaleString()} burned`);
+    if(todayEntry.deficit!=null) parts.push(`${todayEntry.deficit>0?'+':''}${todayEntry.deficit.toLocaleString()} deficit`);
+    if(todayEntry.protein!=null) parts.push(`${todayEntry.protein}g protein`);
+    if(todayEntry.steps!=null) parts.push(`${todayEntry.steps.toLocaleString()} steps`);
+    document.getElementById('todaySummary').textContent=parts.join(' · ');
+    document.getElementById('todayLogged').style.display='block';
+    document.getElementById('todayEmpty').style.display='none';
+  }
+}
+</script>
+</body>
+</html>

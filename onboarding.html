@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Shred System — Setup</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+<style>
+:root{--black:#0a0a0a;--white:#f5f2ee;--accent:#c8ff00;--muted:#666;--card:#141414;--border:rgba(255,255,255,0.08);--input:#1a1a1a}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--black);color:var(--white);font-family:'DM Sans',sans-serif;font-weight:300;min-height:100vh;-webkit-font-smoothing:antialiased}
+nav{padding:1.1rem 1.25rem;border-bottom:0.5px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.logo{font-family:'Bebas Neue',sans-serif;font-size:20px;color:var(--accent);letter-spacing:0.08em}
+.step-indicator{font-size:12px;color:var(--muted);letter-spacing:0.06em}
+.wrap{max-width:560px;margin:0 auto;padding:2rem 1.25rem}
+.progress-bar{height:2px;background:rgba(255,255,255,0.06);margin-bottom:3rem;position:relative}
+.progress-fill{height:100%;background:var(--accent);transition:width 0.4s ease}
+.step{display:none}
+.step.active{display:block;animation:fade 0.3s ease}
+@keyframes fade{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.step-eyebrow{font-size:11px;letter-spacing:0.16em;text-transform:uppercase;color:var(--accent);margin-bottom:0.75rem}
+.step-title{font-family:'Bebas Neue',sans-serif;font-size:clamp(36px,8vw,56px);line-height:1;margin-bottom:0.75rem}
+.step-sub{font-size:14px;color:var(--muted);margin-bottom:2rem;line-height:1.6}
+.options{display:flex;flex-direction:column;gap:8px;margin-bottom:2rem}
+.opt{padding:14px 16px;border:0.5px solid var(--border);background:transparent;color:var(--white);font-family:'DM Sans',sans-serif;font-size:14px;cursor:pointer;text-align:left;transition:all 0.15s;letter-spacing:0.02em}
+.opt:hover{border-color:rgba(200,255,0,0.3);color:var(--accent)}
+.opt.selected{border-color:var(--accent);background:rgba(200,255,0,0.06);color:var(--accent)}
+.form-group{display:flex;flex-direction:column;gap:5px;margin-bottom:12px}
+.form-group label{font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted)}
+.form-group input,.form-group select{font-size:15px;padding:12px;background:var(--input);border:0.5px solid var(--border);color:var(--white);font-family:'DM Sans',sans-serif;outline:none;transition:border-color 0.2s;width:100%;-webkit-appearance:none}
+.form-group input:focus,.form-group select:focus{border-color:rgba(200,255,0,0.4)}
+.form-group select option{background:#1a1a1a}
+.btn-next{background:var(--accent);color:var(--black);font-family:'DM Sans',sans-serif;font-size:14px;font-weight:500;padding:13px 32px;border:none;cursor:pointer;letter-spacing:0.05em;transition:opacity 0.2s;margin-top:0.5rem}
+.btn-next:hover{opacity:0.9}
+.btn-next:disabled{opacity:0.4;cursor:not-allowed}
+.result-level{font-family:'Bebas Neue',sans-serif;font-size:120px;line-height:1;color:var(--accent);text-align:center;margin:2rem 0 0.5rem}
+.result-name{font-size:20px;color:rgba(255,255,255,0.6);text-align:center;margin-bottom:0.5rem}
+.result-why{font-size:13px;color:var(--muted);text-align:center;max-width:360px;margin:0 auto 2.5rem;line-height:1.7}
+.result-goals{border:0.5px solid var(--border);padding:1.25rem;margin-bottom:2rem}
+.rg-title{font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);margin-bottom:1rem}
+.rg-goal{display:flex;align-items:center;gap:10px;font-size:13px;padding:6px 0;border-bottom:0.5px solid rgba(255,255,255,0.04)}
+.rg-goal:last-child{border-bottom:none}
+.rg-dot{width:5px;height:5px;background:var(--accent);border-radius:50%;flex-shrink:0}
+</style>
+</head>
+<body>
+<nav>
+  <div class="logo">Shred System</div>
+  <div class="step-indicator">Setup — <span id="stepNum">1</span> of 7</div>
+</nav>
+<div class="wrap">
+  <div class="progress-bar"><div class="progress-fill" id="progressFill" style="width:14%"></div></div>
+
+  <!-- Step 1: Training -->
+  <div class="step active" id="s1">
+    <div class="step-eyebrow">Step 1 of 7</div>
+    <div class="step-title">Your training</div>
+    <div class="step-sub">How consistent is your current weekly training?</div>
+    <div class="options">
+      <button class="opt" onclick="pick(this,'training','5-6x/week — weights + cardio')">Weights + cardio 5–6x/week</button>
+      <button class="opt" onclick="pick(this,'training','3-4x/week — weights some cardio')">Weights 3–4x + some cardio</button>
+      <button class="opt" onclick="pick(this,'training','mostly cardio / walking')">Mostly cardio / walking</button>
+      <button class="opt" onclick="pick(this,'training','inconsistent')">Inconsistent — depends on the week</button>
+    </div>
+    <button class="btn-next" id="n1" disabled onclick="next(2)">Next</button>
+  </div>
+
+  <!-- Step 2: Diet -->
+  <div class="step" id="s2">
+    <div class="step-eyebrow">Step 2 of 7</div>
+    <div class="step-title">Your diet</div>
+    <div class="step-sub">How locked in is your nutrition tracking right now?</div>
+    <div class="options">
+      <button class="opt" onclick="pick(this,'diet','tracking everything hitting macros')">Tracking everything, hitting macros most days</button>
+      <button class="opt" onclick="pick(this,'diet','tracking calories loose on macros')">Tracking calories but loose on macros</button>
+      <button class="opt" onclick="pick(this,'diet','eating clean not tracking')">Eating clean but not tracking</button>
+      <button class="opt" onclick="pick(this,'diet','inconsistent')">Inconsistent — good stretches then slip</button>
+    </div>
+    <button class="btn-next" id="n2" disabled onclick="next(3)">Next</button>
+  </div>
+
+  <!-- Step 3: Steps -->
+  <div class="step" id="s3">
+    <div class="step-eyebrow">Step 3 of 7</div>
+    <div class="step-title">Daily movement</div>
+    <div class="step-sub">What's your current step average on a normal day?</div>
+    <div class="options">
+      <button class="opt" onclick="pick(this,'steps','12k+')">12,000+ steps</button>
+      <button class="opt" onclick="pick(this,'steps','8k-12k')">8,000–12,000 steps</button>
+      <button class="opt" onclick="pick(this,'steps','5k-8k')">5,000–8,000 steps</button>
+      <button class="opt" onclick="pick(this,'steps','under 5k')">Under 5,000 steps</button>
+    </div>
+    <button class="btn-next" id="n3" disabled onclick="next(4)">Next</button>
+  </div>
+
+  <!-- Step 4: Protein -->
+  <div class="step" id="s4">
+    <div class="step-eyebrow">Step 4 of 7</div>
+    <div class="step-title">Protein game</div>
+    <div class="step-sub">How often are you actually hitting your protein target?</div>
+    <div class="options">
+      <button class="opt" onclick="pick(this,'protein','always — non negotiable')">Always — non-negotiable</button>
+      <button class="opt" onclick="pick(this,'protein','most days 4-5x/week')">Most days, 4–5x/week</button>
+      <button class="opt" onclick="pick(this,'protein','hit it maybe half the time')">Hit it maybe half the time</button>
+      <button class="opt" onclick="pick(this,'protein','honestly inconsistent')">Honestly inconsistent</button>
+    </div>
+    <button class="btn-next" id="n4" disabled onclick="next(5)">Next</button>
+  </div>
+
+  <!-- Step 5: Experience -->
+  <div class="step" id="s5">
+    <div class="step-eyebrow">Step 5 of 7</div>
+    <div class="step-title">Your history</div>
+    <div class="step-sub">How long have you been training and tracking seriously?</div>
+    <div class="options">
+      <button class="opt" onclick="pick(this,'experience','2+ years seriously')">2+ years with real consistency</button>
+      <button class="opt" onclick="pick(this,'experience','1-2 years seriously')">1–2 years with real consistency</button>
+      <button class="opt" onclick="pick(this,'experience','6-12 months')">6–12 months</button>
+      <button class="opt" onclick="pick(this,'experience','just getting started')">Just getting dialed in</button>
+    </div>
+    <button class="btn-next" id="n5" disabled onclick="next(6)">Next</button>
+  </div>
+
+  <!-- Step 6: Body stats -->
+  <div class="step" id="s6">
+    <div class="step-eyebrow">Step 6 of 7</div>
+    <div class="step-title">Your numbers</div>
+    <div class="step-sub">These feed into your automated stats. You can update them anytime in your profile.</div>
+    <div class="form-group"><label>Current bodyweight (lbs)</label><input type="number" id="bodyweight" placeholder="215" step="0.1"/></div>
+    <div class="form-group"><label>Estimated daily calories burned (TDEE)</label><input type="number" id="tdee" placeholder="3800"/></div>
+    <div class="form-group"><label>Protein target (g/day)</label><input type="number" id="protTarget" placeholder="210"/></div>
+    <div class="form-group"><label>Goal</label>
+      <select id="goal">
+        <option value="">Select your goal</option>
+        <option value="full shred — fat loss priority">Full shred — fat loss priority</option>
+        <option value="recomp — lose fat build muscle">Recomp — lose fat + build muscle</option>
+        <option value="lean bulk — muscle gain">Lean bulk — muscle gain</option>
+        <option value="maintain and track">Maintain and track</option>
+      </select>
+    </div>
+    <button class="btn-next" id="n6" onclick="next(7)" style="margin-top:1rem">Next</button>
+  </div>
+
+  <!-- Step 7: Result -->
+  <div class="step" id="s7">
+    <div class="step-eyebrow">Your starting level</div>
+    <div class="result-level" id="resultLevel">8</div>
+    <div class="result-name" id="resultName">Precision Protocol</div>
+    <div class="result-why" id="resultWhy"></div>
+    <div class="result-goals" id="resultGoals"></div>
+    <button class="btn-next" style="width:100%" onclick="finish()">Enter the system</button>
+  </div>
+</div>
+
+<script src="/js/config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="/js/levels.js"></script>
+<script>
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+const answers = {};
+
+(async()=>{
+  const {data:{session}} = await sb.auth.getSession();
+  if(!session) { window.location.href='/login.html'; return; }
+  const {data:profile} = await sb.from('profiles').select('name,current_level').eq('id',session.user.id).single();
+  if(profile?.name && profile?.current_level > 0) window.location.href='/dashboard.html';
+})();
+
+function pick(el, key, val) {
+  el.closest('.options').querySelectorAll('.opt').forEach(o=>o.classList.remove('selected'));
+  el.classList.add('selected');
+  answers[key] = val;
+  const stepNum = el.closest('.step').id.replace('s','');
+  document.getElementById('n'+stepNum).disabled = false;
+}
+
+function next(to) {
+  if(to===7) computeLevel();
+  document.querySelectorAll('.step').forEach(s=>s.classList.remove('active'));
+  document.getElementById('s'+to).classList.add('active');
+  document.getElementById('stepNum').textContent = to;
+  document.getElementById('progressFill').style.width = (to/7*100)+'%';
+  window.scrollTo(0,0);
+}
+
+function computeLevel() {
+  let score = 0;
+  // Training
+  if(answers.training?.includes('5-6x')) score += 3;
+  else if(answers.training?.includes('3-4x')) score += 2;
+  else if(answers.training?.includes('cardio')) score += 1;
+  // Diet
+  if(answers.diet?.includes('tracking everything')) score += 3;
+  else if(answers.diet?.includes('loose')) score += 2;
+  else if(answers.diet?.includes('clean')) score += 1;
+  // Steps
+  if(answers.steps==='12k+') score += 3;
+  else if(answers.steps==='8k-12k') score += 2;
+  else if(answers.steps==='5k-8k') score += 1;
+  // Protein
+  if(answers.protein?.includes('always')) score += 3;
+  else if(answers.protein?.includes('most')) score += 2;
+  else if(answers.protein?.includes('half')) score += 1;
+  // Experience
+  if(answers.experience?.includes('2+')) score += 3;
+  else if(answers.experience?.includes('1-2')) score += 2;
+  else if(answers.experience?.includes('6-12')) score += 1;
+
+  // Map score (0-15) to level (1-10)
+  let level = 1;
+  if(score >= 14) level = 10;
+  else if(score >= 12) level = 9;
+  else if(score >= 10) level = 8;
+  else if(score >= 8) level = 7;
+  else if(score >= 6) level = 6;
+  else if(score >= 5) level = 5;
+  else if(score >= 4) level = 4;
+  else if(score >= 3) level = 3;
+  else if(score >= 2) level = 2;
+
+  const ld = genLevel(level);
+  document.getElementById('resultLevel').textContent = level;
+  document.getElementById('resultName').textContent = ld.name;
+
+  const whys = [];
+  if(answers.training?.includes('5-6x')) whys.push('elite training volume');
+  if(answers.diet?.includes('loose')) whys.push('macro precision is your next unlock');
+  if(answers.steps==='5k-8k') whys.push('step count has room to grow');
+  if(answers.protein?.includes('half')) whys.push('protein consistency is your #1 lever');
+  document.getElementById('resultWhy').textContent = `Based on your ${answers.experience || 'training history'} — ${whys.length ? whys.join(', ') + '.' : 'your system is solid, time to tighten the margins.'}`;
+
+  document.getElementById('resultGoals').innerHTML = `
+    <div class="rg-title">Level ${level} goals to advance</div>
+    ${ld.goals.map(g=>`<div class="rg-goal"><div class="rg-dot"></div>${g.label}</div>`).join('')}
+  `;
+
+  answers._level = level;
+}
+
+async function finish() {
+  const {data:{session}} = await sb.auth.getSession();
+  if(!session) { window.location.href='/login.html'; return; }
+  const uid = session.user.id;
+  const bw = parseFloat(document.getElementById('bodyweight').value) || null;
+  const tdee = parseInt(document.getElementById('tdee').value) || null;
+  const prot = parseInt(document.getElementById('protTarget').value) || null;
+  const goal = document.getElementById('goal').value || null;
+
+  await sb.from('profiles').update({
+    current_level: answers._level || 1,
+    start_level: answers._level || 1,
+    bodyweight: bw, tdee, protein_target: prot, goal
+  }).eq('id', uid);
+
+  window.location.href = '/dashboard.html';
+}
+</script>
+</body>
+</html>
