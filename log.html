@@ -62,7 +62,7 @@
           <thead><tr>
             <th style="text-align:left">Date</th>
             <th>Wt</th><th>In</th><th>Out</th>
-            <th>Deficit</th><th>P/lb</th><th>Steps</th><th>Est lbs</th>
+            <th>Deficit</th><th>P/lb</th><th>Steps</th><th>Est lbs</th><th></th>
           </tr></thead>
           <tbody id="histBody"></tbody>
         </table>
@@ -112,6 +112,7 @@ async function loadLogs() {
 }
 
 function prefillForm(e) {
+  if(e.date)   document.getElementById('fDate').value=e.date;
   if(e.weight) document.getElementById('fWt').value=e.weight;
   if(e.cal_in) document.getElementById('fIn').value=e.cal_in;
   if(e.cal_out) document.getElementById('fOut').value=e.cal_out;
@@ -120,6 +121,14 @@ function prefillForm(e) {
   if(e.fat) document.getElementById('fFat').value=e.fat;
   if(e.steps) document.getElementById('fSteps').value=e.steps;
   if(e.notes) document.getElementById('fNotes').value=e.notes;
+}
+
+function loadEntry(date) {
+  const row = allRows.find(r=>r.date===date);
+  if(!row) return;
+  prefillForm(row);
+  window.scrollTo(0,0);
+  toast('Loaded — edit and save');
 }
 
 function parseAI() {
@@ -154,7 +163,9 @@ async function saveDay() {
     notes:document.getElementById('fNotes').value||null
   };
 
-  const {error} = await sb.from('daily_logs').upsert(entry,{onConflict:'user_id,date'});
+  // Delete all rows for this date first (handles duplicates + no UNIQUE constraint needed)
+  await sb.from('daily_logs').delete().eq('user_id',uid).eq('date',date);
+  const {error} = await sb.from('daily_logs').insert(entry);
   if(error){toast('Error saving — try again','error');console.error(error);return;}
 
   // check level up
@@ -174,20 +185,29 @@ async function checkAndLevelUp() {
   }
 }
 
+async function deleteEntry(date) {
+  if(!confirm(`Delete entry for ${date}?`)) return;
+  const {error} = await sb.from('daily_logs').delete().eq('user_id',uid).eq('date',date);
+  if(error){toast('Error deleting','error');return;}
+  toast('Entry deleted');
+  await loadLogs();
+}
+
 function clearForm() {
+  document.getElementById('fDate').value=now.toISOString().split('T')[0];
   ['fWt','fIn','fOut','fProt','fCarbs','fFat','fSteps'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('fNotes').value='';
 }
 
 function renderHistory() {
   const tb=document.getElementById('histBody');
-  if(!allRows.length){tb.innerHTML='<tr><td colspan="8" style="padding:2rem;text-align:center;color:var(--muted)">No entries yet this month</td></tr>';return;}
+  if(!allRows.length){tb.innerHTML='<tr><td colspan="9" style="padding:2rem;text-align:center;color:var(--muted)">No entries yet this month</td></tr>';return;}
   tb.innerHTML=[...allRows].reverse().map(r=>{
     const d=new Date(r.date+'T12:00:00');
     const lbl=d.toLocaleDateString('en-US',{month:'short',day:'numeric'});
     const dc=r.deficit==null?'':r.deficit>=0?'color:var(--good)':'color:var(--bad)';
     const pc=r.protPerLb==null?'':r.protPerLb>=1?'color:var(--good)':r.protPerLb>=0.8?'color:var(--warn)':'color:var(--bad)';
-    return`<tr>
+    return`<tr style="cursor:pointer" onclick="loadEntry('${r.date}')">
       <td>${lbl}</td>
       <td>${r.weight??'—'}</td>
       <td>${r.cal_in!=null?r.cal_in.toLocaleString():'—'}</td>
@@ -196,6 +216,7 @@ function renderHistory() {
       <td style="${pc}">${r.protPerLb!=null?r.protPerLb.toFixed(2):'—'}</td>
       <td>${r.steps!=null?r.steps.toLocaleString():'—'}</td>
       <td>${r.estLbs.toFixed(2)}</td>
+      <td><button onclick="event.stopPropagation();deleteEntry('${r.date}')" style="background:none;border:none;color:var(--bad);cursor:pointer;font-size:16px;padding:0 4px;line-height:1" title="Delete entry">×</button></td>
     </tr>`;
   }).join('');
 
