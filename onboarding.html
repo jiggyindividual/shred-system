@@ -166,8 +166,8 @@ const answers = {};
 (async()=>{
   const {data:{session}} = await sb.auth.getSession();
   if(!session) { window.location.href='/login.html'; return; }
-  const {data:profile} = await sb.from('profiles').select('name,current_level').eq('id',session.user.id).single();
-  if(profile?.name && profile?.current_level > 0) window.location.href='/dashboard.html';
+  const {data:profile} = await sb.from('profiles').select('tdee').eq('id',session.user.id).single();
+  if(profile?.tdee) window.location.href='/dashboard.html';
 })();
 
 function pick(el, key, val) {

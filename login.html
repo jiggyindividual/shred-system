@@ -118,8 +118,9 @@ function authTimeout(promise, ms = 15000) {
 
 async function redirectAfterAuth(uid) {
   try {
-    const { data } = await sb.from('profiles').select('name').eq('id', uid).single();
-    if (!data || !data.name) {
+    const { data } = await sb.from('profiles').select('tdee').eq('id', uid).single();
+    // tdee is null until onboarding finish() runs — use it as the "onboarded" signal
+    if (!data || !data.tdee) {
       window.location.href = '/onboarding.html';
     } else {
       window.location.href = '/dashboard.html';
