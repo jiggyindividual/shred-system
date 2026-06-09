@@ -8,61 +8,182 @@
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
 <link rel="stylesheet" href="/css/shared.css"/>
 <style>
-.chart-wrap{position:relative;width:100%;height:220px;margin-bottom:1rem}
-.chart-tab-row{display:flex;gap:4px;margin-bottom:0.75rem;flex-wrap:wrap}
-.ctab{font-size:11px;padding:5px 12px;border:0.5px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;font-family:'DM Sans',sans-serif;letter-spacing:0.04em;transition:all 0.2s}
+/* ── Period selector ── */
+.period-row{display:flex;border:0.5px solid var(--border);margin-bottom:1.25rem}
+.period-btn{flex:1;padding:12px 4px;background:transparent;border:none;border-right:0.5px solid var(--border);color:var(--muted);font-family:'DM Sans',sans-serif;font-size:12px;font-weight:500;cursor:pointer;letter-spacing:0.08em;transition:all 0.2s;text-align:center}
+.period-btn:last-child{border-right:none}
+.period-btn.active{background:var(--accent);color:var(--black)}
+
+/* ── Verdict ── */
+.verdict{border-left:3px solid var(--accent);background:var(--card);border-top:0.5px solid var(--border);border-right:0.5px solid var(--border);border-bottom:0.5px solid var(--border);padding:1.25rem 1.25rem 1.25rem 1.5rem;margin-bottom:1rem}
+.verdict-eye{font-size:10px;letter-spacing:0.14em;text-transform:uppercase;color:var(--accent);margin-bottom:0.5rem}
+.verdict-body{font-family:'Bebas Neue',sans-serif;font-size:clamp(22px,5vw,30px);line-height:1.15;color:var(--white);letter-spacing:0.02em}
+.verdict-body .va{color:var(--accent)}
+
+/* ── Hero: est lbs lost ── */
+.hero-fat{text-align:center;background:var(--card);border:0.5px solid var(--border);padding:2rem 1rem 1.5rem;margin-bottom:1rem;position:relative;overflow:hidden}
+.hero-fat::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--accent)}
+.hero-fat-label{font-size:10px;letter-spacing:0.14em;text-transform:uppercase;color:var(--muted);margin-bottom:0.5rem}
+.hero-fat-val{font-family:'Bebas Neue',sans-serif;font-size:clamp(80px,20vw,128px);line-height:0.88;color:var(--accent)}
+.hero-fat-unit{font-size:13px;letter-spacing:0.12em;text-transform:uppercase;color:rgba(255,255,255,0.5);margin-top:0.5rem}
+.hero-fat-math{font-size:12px;color:var(--muted);margin-top:0.875rem;border-top:0.5px solid var(--border);padding-top:0.875rem;line-height:1.6}
+.hero-fat-math strong{color:var(--white)}
+
+/* ── Triple stat strip ── */
+.triple{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:1rem}
+.tri{background:var(--card);border:0.5px solid var(--border);padding:1rem 0.75rem}
+.tri-label{font-size:10px;letter-spacing:0.06em;text-transform:uppercase;color:var(--muted);margin-bottom:5px}
+.tri-val{font-family:'Bebas Neue',sans-serif;font-size:30px;line-height:1;margin-bottom:3px}
+.tri-note{font-size:10px;color:var(--muted);line-height:1.4}
+
+/* ── Trend chart ── */
+.chart-card{background:var(--card);border:0.5px solid var(--border);padding:1.25rem;margin-bottom:1rem}
+.chart-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;flex-wrap:wrap;gap:8px}
+.chart-head-title{font-family:'Bebas Neue',sans-serif;font-size:17px;letter-spacing:0.04em}
+.ctabs{display:flex;gap:4px;flex-wrap:wrap}
+.ctab{font-size:11px;padding:4px 10px;border:0.5px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;font-family:'DM Sans',sans-serif;transition:all 0.2s;letter-spacing:0.03em}
 .ctab.active{background:var(--accent);color:var(--black);border-color:var(--accent);font-weight:500}
-.archive-card{background:var(--card);border:0.5px solid var(--border);padding:1rem;margin-bottom:8px}
-.archive-month{font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:0.04em;margin-bottom:4px}
-.archive-stats{display:flex;gap:1.5rem;flex-wrap:wrap}
-.arch-stat{font-size:12px;color:var(--muted)}
-.arch-stat span{color:var(--white);font-weight:500}
+.chart-wrap{position:relative;width:100%;height:200px}
+
+/* ── 2×2 body breakdown ── */
+.bdown-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:1rem}
+.bdown{background:var(--card);border:0.5px solid var(--border);padding:1rem}
+.bdown-label{font-size:10px;letter-spacing:0.08em;text-transform:uppercase;color:var(--muted);margin-bottom:0.625rem}
+.bdown-val{font-family:'Bebas Neue',sans-serif;font-size:34px;line-height:1;margin-bottom:3px}
+.bdown-sub{font-size:11px;color:var(--muted);line-height:1.4}
+.bdown-bar{height:3px;background:rgba(255,255,255,0.05);margin-top:9px;border-radius:1px}
+.bdown-fill{height:100%;background:var(--accent);transition:width 0.6s ease;border-radius:1px}
+
+/* ── Plain English ── */
+.pe-card{background:var(--card);border:0.5px solid var(--border);padding:1.25rem;margin-bottom:1rem}
+.pe-head{font-size:10px;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);margin-bottom:1rem}
+.pe-item{display:flex;gap:10px;padding:9px 0;border-bottom:0.5px solid rgba(255,255,255,0.04);align-items:flex-start}
+.pe-item:last-child{border-bottom:none;padding-bottom:0}
+.pe-dot{width:5px;height:5px;background:var(--accent);border-radius:50%;flex-shrink:0;margin-top:6px}
+.pe-text{font-size:13px;color:rgba(255,255,255,0.72);line-height:1.6}
+.pe-text strong{color:var(--white);font-weight:500}
+.pe-text .hi{color:var(--accent)}
+
+/* ── Month-by-month ── */
+.mc-card{background:var(--card);border:0.5px solid var(--border);padding:1.25rem;margin-bottom:1rem}
+.mc-head{font-size:10px;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);margin-bottom:1rem}
+.mc-row{display:flex;align-items:center;justify-content:space-between;padding:11px 0;border-bottom:0.5px solid rgba(255,255,255,0.04)}
+.mc-row:last-child{border-bottom:none;padding-bottom:0}
+.mc-name{font-family:'Bebas Neue',sans-serif;font-size:17px;letter-spacing:0.04em;color:var(--white)}
+.mc-name.cur{color:var(--accent)}
+.mc-pills{display:flex;gap:10px;flex-wrap:wrap;margin-top:2px}
+.mc-pill{font-size:10px;color:var(--muted)}
+.mc-pill span{color:var(--white)}
+.mc-lbs-wrap{text-align:right}
+.mc-lbs{font-family:'Bebas Neue',sans-serif;font-size:26px;color:var(--accent);line-height:1}
+.mc-lbs-label{font-size:10px;color:var(--muted)}
+
+@media(max-width:380px){
+  .triple{grid-template-columns:1fr 1fr}
+  .tri:last-child{grid-column:1/-1}
+  .hero-fat-val{font-size:80px}
+}
 </style>
 </head>
 <body>
+
 <div class="page-header">
   <div class="page-title">Progress</div>
-  <div id="monthLabel" style="font-size:12px;color:var(--muted)"></div>
+  <div id="periodLabel" style="font-size:12px;color:var(--muted)"></div>
 </div>
 
 <div class="wrap">
   <div class="loader" id="loader"><div class="spinner"></div></div>
   <div id="content" style="display:none">
 
-    <div class="stat-grid">
-      <div class="stat-card"><div class="stat-label">Avg deficit</div><div class="stat-val" id="sAvgDef">—</div><div class="stat-sub" style="color:var(--muted);font-size:11px">cal/day</div></div>
-      <div class="stat-card"><div class="stat-label">Est. lbs lost</div><div class="stat-val" id="sEstLbs">—</div><div class="stat-sub" style="color:var(--muted);font-size:11px">this month</div></div>
-      <div class="stat-card"><div class="stat-label">Deficit eff.</div><div class="stat-val" id="sEff">—</div><div class="stat-sub" id="sEffSub" style="font-size:11px"></div></div>
-      <div class="stat-card"><div class="stat-label">Lean mass</div><div class="stat-val" id="sLean">—</div><div class="stat-sub" id="sLeanSub" style="font-size:11px"></div></div>
-      <div class="stat-card"><div class="stat-label">Avg protein/lb</div><div class="stat-val" id="sAvgProt">—</div><div class="stat-sub" id="sProtSub" style="font-size:11px"></div></div>
-      <div class="stat-card"><div class="stat-label">Avg steps</div><div class="stat-val" id="sSteps">—</div><div class="stat-sub" style="color:var(--muted);font-size:11px">per day</div></div>
+    <div class="period-row">
+      <button class="period-btn active" onclick="setPeriod('1MO',this)">1 MO</button>
+      <button class="period-btn" onclick="setPeriod('3MO',this)">3 MO</button>
+      <button class="period-btn" onclick="setPeriod('6MO',this)">6 MO</button>
+      <button class="period-btn" onclick="setPeriod('YTD',this)">YTD</button>
     </div>
 
-    <div class="card">
-      <div class="card-header" style="margin-bottom:0.75rem">
-        <div class="card-title">Charts</div>
+    <div class="verdict">
+      <div class="verdict-eye">The verdict</div>
+      <div class="verdict-body" id="verdictText">—</div>
+    </div>
+
+    <div class="hero-fat">
+      <div class="hero-fat-label">Estimated pounds of fat lost</div>
+      <div class="hero-fat-val" id="heroVal">—</div>
+      <div class="hero-fat-unit">LBS</div>
+      <div class="hero-fat-math" id="heroMath"></div>
+    </div>
+
+    <div class="triple">
+      <div class="tri">
+        <div class="tri-label">Avg deficit</div>
+        <div class="tri-val" id="triDef">—</div>
+        <div class="tri-note" id="triDefNote"></div>
       </div>
-      <div class="chart-tab-row">
-        <button class="ctab active" onclick="switchChart('weight',this)">Weight</button>
-        <button class="ctab" onclick="switchChart('deficit',this)">Deficit</button>
-        <button class="ctab" onclick="switchChart('cumulative',this)">Cumulative</button>
-        <button class="ctab" onclick="switchChart('protein',this)">Protein/lb</button>
-        <button class="ctab" onclick="switchChart('steps',this)">Steps</button>
-        <button class="ctab" onclick="switchChart('macros',this)">Macros</button>
+      <div class="tri">
+        <div class="tri-label">Consistency</div>
+        <div class="tri-val" id="triCons">—</div>
+        <div class="tri-note" id="triConsNote"></div>
       </div>
-      <div class="chart-wrap"><canvas id="mainChart" role="img" aria-label="Recomposition chart">No data.</canvas></div>
+      <div class="tri">
+        <div class="tri-label">Protein avg</div>
+        <div class="tri-val" id="triProt">—</div>
+        <div class="tri-note" id="triProtNote"></div>
+      </div>
     </div>
 
-    <!-- Week breakdown -->
-    <div class="card">
-      <div class="card-title" style="margin-bottom:1rem">Week breakdown</div>
-      <div id="weekBreakdown"></div>
+    <div class="chart-card">
+      <div class="chart-head">
+        <div class="chart-head-title">Trends</div>
+        <div class="ctabs">
+          <button class="ctab active" onclick="switchChart('weight',this)">Weight</button>
+          <button class="ctab" onclick="switchChart('deficit',this)">Deficit</button>
+          <button class="ctab" onclick="switchChart('cumulative',this)">Cumulative</button>
+          <button class="ctab" onclick="switchChart('protein',this)">Protein/lb</button>
+          <button class="ctab" onclick="switchChart('steps',this)">Steps</button>
+        </div>
+      </div>
+      <div class="chart-wrap"><canvas id="mainChart"></canvas></div>
     </div>
 
-    <!-- Archives -->
-    <div class="card">
-      <div class="card-title" style="margin-bottom:1rem">Monthly archives</div>
-      <div id="archives"><div class="empty"><div class="empty-icon">📁</div>No past months yet</div></div>
+    <div class="bdown-grid">
+      <div class="bdown">
+        <div class="bdown-label">Weight change</div>
+        <div class="bdown-val" id="bdWt">—</div>
+        <div class="bdown-sub" id="bdWtSub"></div>
+        <div class="bdown-bar"><div class="bdown-fill" id="bdWtFill" style="width:0%"></div></div>
+      </div>
+      <div class="bdown">
+        <div class="bdown-label">Lean mass score</div>
+        <div class="bdown-val" id="bdLean">—</div>
+        <div class="bdown-sub" id="bdLeanSub"></div>
+        <div class="bdown-bar"><div class="bdown-fill" id="bdLeanFill" style="width:0%"></div></div>
+      </div>
+      <div class="bdown">
+        <div class="bdown-label">Steps above 8k</div>
+        <div class="bdown-val" id="bdStep">—</div>
+        <div class="bdown-sub" id="bdStepSub"></div>
+        <div class="bdown-bar"><div class="bdown-fill" id="bdStepFill" style="width:0%"></div></div>
+      </div>
+      <div class="bdown">
+        <div class="bdown-label">Deficit efficiency</div>
+        <div class="bdown-val" id="bdEff">—</div>
+        <div class="bdown-sub" id="bdEffSub"></div>
+        <div class="bdown-bar"><div class="bdown-fill" id="bdEffFill" style="width:0%"></div></div>
+      </div>
+    </div>
+
+    <div class="pe-card">
+      <div class="pe-head">In plain English</div>
+      <div id="peList"></div>
+    </div>
+
+    <div id="mcCard" style="display:none">
+      <div class="mc-card">
+        <div class="mc-head">Month by month</div>
+        <div id="mcList"></div>
+      </div>
     </div>
 
   </div>
@@ -75,112 +196,322 @@
 <script src="/js/nav.js"></script>
 <script src="/js/levels.js"></script>
 <script>
-const sb=getClient();
-const now=new Date();
-const curMK=monthKey();
-document.getElementById('monthLabel').textContent=monthLabel(curMK);
-let chartInst=null, rows=[];
+const sb = getClient();
+const now = new Date();
+const curMK = monthKey();
+
+let uid, profile, curMonthRows=[], allArcs=[], chartInst=null, activePeriod='1MO', activeChart='weight';
 
 (async()=>{
-  const session=await requireAuth();if(!session)return;
-  const uid=session.user.id;
-  const profile=await getProfile();
-  if(!profile?.name){window.location.href='/onboarding.html';return;}
+  const session = await requireAuth();
+  if(!session) return;
+  uid = session.user.id;
+  profile = await getProfile();
+  if(!profile?.name){ window.location.href='/onboarding.html'; return; }
 
-  const {data:logs}=await sb.from('daily_logs').select('*').eq('user_id',uid).eq('month_key',curMK).order('date',{ascending:true});
-  rows=computeRows(logs||[]);
-  renderStats();
-  renderChart('weight');
-  renderWeeks();
+  const [{data:logs},{data:arcs}] = await Promise.all([
+    sb.from('daily_logs').select('*').eq('user_id',uid).eq('month_key',curMK).order('date',{ascending:true}),
+    sb.from('monthly_archives').select('*').eq('user_id',uid).order('month_key',{ascending:true})
+  ]);
 
-  const {data:arcs}=await sb.from('monthly_archives').select('*').eq('user_id',uid).order('month_key',{ascending:false});
-  renderArchives(arcs||[]);
+  curMonthRows = computeRows(logs||[]);
+  allArcs = arcs||[];
 
+  renderPeriod('1MO');
   document.getElementById('loader').style.display='none';
   document.getElementById('content').style.display='block';
   injectNav('progress');
 })();
 
-function renderStats() {
-  const s=computeMonthStats(rows);
-  document.getElementById('sAvgDef').textContent=s.avgDef?s.avgDef.toLocaleString():'—';
-  document.getElementById('sEstLbs').innerHTML=Math.abs(s.estLbs).toFixed(1)+'<span class="stat-unit">lbs</span>';
-  const ee=document.getElementById('sEff'),es=document.getElementById('sEffSub');
-  if(s.effPct!=null){ee.innerHTML=s.effPct+'<span class="stat-unit">%</span>';const c=s.effPct<=10?'good':s.effPct<=20?'warn':'bad';es.className='stat-sub '+c;es.textContent=s.effPct<=10?'Dialed in':s.effPct<=20?'Close':'Check tracking';}
-  else{ee.textContent='—';es.textContent='Need 2+ weight entries';}
-  const le=document.getElementById('sLean'),ls=document.getElementById('sLeanSub');
-  if(s.leanScore!=null){le.innerHTML=s.leanScore+'<span class="stat-unit">%</span>';const c=s.leanScore>=85?'good':s.leanScore>=70?'warn':'bad';ls.className='stat-sub '+c;ls.textContent=s.leanScore>=85?'Preserved':s.leanScore>=70?'Moderate':'At risk';}
-  else{le.textContent='—';ls.textContent='';}
-  const pe=document.getElementById('sAvgProt'),ps=document.getElementById('sProtSub');
-  if(s.avgProt){pe.innerHTML=s.avgProt+'<span class="stat-unit">g/lb</span>';const c=s.avgProt>=1?'good':s.avgProt>=0.8?'warn':'bad';ps.className='stat-sub '+c;ps.textContent=s.avgProt>=1?'On target':'Below target';}
-  else{pe.textContent='—';ps.textContent='';}
-  document.getElementById('sSteps').textContent=s.avgSteps?s.avgSteps.toLocaleString():'—';
+/* ── Period helpers ── */
+
+function getPeriodMonths(period) {
+  const yr=now.getFullYear(), mo=now.getMonth();
+  if(period==='1MO') return [curMK];
+  const count = period==='3MO'?3 : period==='6MO'?6 : mo+1; // YTD
+  const months=[];
+  for(let i=count-1;i>=0;i--){
+    const d=new Date(yr,mo-i,1);
+    months.push(monthKey(d));
+  }
+  return months;
 }
 
-function renderChart(type) {
+function getPeriodTotalDays(months) {
+  let total=0;
+  months.forEach(mk=>{
+    const [yr,mo]=mk.split('-').map(Number);
+    total += mk===curMK ? now.getDate() : new Date(yr,mo,0).getDate();
+  });
+  return total;
+}
+
+function getPeriodRows(period) {
+  const months=getPeriodMonths(period);
+  if(period==='1MO') return curMonthRows;
+
+  let allLogs=[];
+  months.forEach(mk=>{
+    if(mk===curMK){
+      allLogs.push(...curMonthRows.map(r=>({
+        date:r.date,weight:r.weight,cal_in:r.cal_in,cal_out:r.cal_out,
+        protein:r.protein,carbs:r.carbs,fat:r.fat,steps:r.steps
+      })));
+    } else {
+      const arc=allArcs.find(a=>a.month_key===mk);
+      if(arc?.snapshot&&Array.isArray(arc.snapshot)) allLogs.push(...arc.snapshot);
+    }
+  });
+  allLogs.sort((a,b)=>(a.date||'').localeCompare(b.date||''));
+  return computeRows(allLogs);
+}
+
+/* ── Main render ── */
+
+function setPeriod(p,el) {
+  activePeriod=p;
+  document.querySelectorAll('.period-btn').forEach(b=>b.classList.remove('active'));
+  el.classList.add('active');
+  renderPeriod(p);
+}
+
+function renderPeriod(period) {
+  const months=getPeriodMonths(period);
+  const rows=getPeriodRows(period);
+  const s=computeMonthStats(rows);
+
+  // Period-accurate consistency
+  const loggedDays=rows.filter(r=>r.cal_in!=null||r.weight!=null).length;
+  const totalCalDays=getPeriodTotalDays(months);
+  s.consistency=totalCalDays>0?Math.round(loggedDays/totalCalDays*100):0;
+  s.loggedDays=loggedDays;
+  s.totalCalDays=totalCalDays;
+
+  // Header label
+  const yr=now.getFullYear();
+  const firstLabel=monthLabel(months[0]).split(' ')[0];
+  const lastLabel=monthLabel(months[months.length-1]).split(' ')[0];
+  document.getElementById('periodLabel').textContent=
+    period==='1MO'?monthLabel(curMK):
+    period==='YTD'?`Jan – ${lastLabel} ${yr}`:
+    `${firstLabel} – ${lastLabel} ${yr}`;
+
+  renderVerdict(s,rows);
+  renderHero(s);
+  renderTriple(s);
+  renderChart(activeChart,rows);
+  renderBreakdown(s,rows);
+  renderPlainEnglish(s,rows);
+  renderMonthCompare(months,period);
+}
+
+/* ── Section renderers ── */
+
+function renderVerdict(s,rows) {
+  const el=document.getElementById('verdictText');
+  if(!s.loggedDays){el.textContent='No data yet for this period. Start logging.';return;}
+  const lbs=Math.abs(s.estLbs).toFixed(1);
+  if(s.consistency>=80&&s.avgDef>=500)
+    el.innerHTML=`Locked in. <span class="va">${s.loggedDays} days</span> tracked — down an estimated <span class="va">${lbs} lbs</span> of fat.`;
+  else if(s.estLbs>0)
+    el.innerHTML=`<span class="va">${s.loggedDays} days</span> in the books. Estimated <span class="va">${lbs} lbs</span> of fat gone.`;
+  else
+    el.innerHTML=`<span class="va">${s.loggedDays} days</span> logged. Keep stacking the deficit.`;
+}
+
+function renderHero(s) {
+  const lbs=Math.abs(s.estLbs);
+  document.getElementById('heroVal').textContent=lbs>0?lbs.toFixed(1):'0.0';
+  const pace=s.avgDef>0?(s.avgDef*30.4/3500).toFixed(1):null;
+  document.getElementById('heroMath').innerHTML=s.cumDef
+    ?`<strong>${Math.abs(s.cumDef).toLocaleString()} cal</strong> total deficit · 3,500 cal = 1 lb of fat${pace?` · <strong>${pace} lbs / month pace</strong>`:''}`
+    :`Log calories in + out to see your fat loss estimate`;
+}
+
+function renderTriple(s) {
+  const de=document.getElementById('triDef'),dn=document.getElementById('triDefNote');
+  if(s.avgDef){
+    de.innerHTML=s.avgDef.toLocaleString()+'<span style="font-size:11px;font-family:\'DM Sans\',sans-serif;color:var(--muted);font-weight:300"> cal</span>';
+    de.style.color=s.avgDef>=500?'var(--good)':s.avgDef>=250?'var(--warn)':'var(--bad)';
+    dn.textContent=s.avgDef>=500?'On track':s.avgDef>=250?'Getting there':'Below target';
+  } else {de.textContent='—';de.style.color='';dn.textContent='Log cal in + out';}
+
+  const ce=document.getElementById('triCons'),cn=document.getElementById('triConsNote');
+  ce.innerHTML=s.consistency+'<span style="font-size:11px;font-family:\'DM Sans\',sans-serif;color:var(--muted);font-weight:300">%</span>';
+  ce.style.color=s.consistency>=80?'var(--good)':s.consistency>=55?'var(--warn)':'var(--bad)';
+  cn.textContent=`${s.loggedDays} of ${s.totalCalDays} days`;
+
+  const pe=document.getElementById('triProt'),pn=document.getElementById('triProtNote');
+  if(s.avgProt){
+    pe.innerHTML=s.avgProt.toFixed(2)+'<span style="font-size:11px;font-family:\'DM Sans\',sans-serif;color:var(--muted);font-weight:300"> g</span>';
+    pe.style.color=s.avgProt>=1?'var(--good)':s.avgProt>=0.8?'var(--warn)':'var(--bad)';
+    pn.textContent=s.avgProt>=1?'Target hit ✓':'Per lb bodyweight';
+  } else {pe.textContent='—';pe.style.color='';pn.textContent='Log protein + weight';}
+}
+
+const coBase={responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{
+  x:{ticks:{color:'#444',font:{size:10},maxTicksLimit:7},grid:{color:'rgba(255,255,255,0.03)'}},
+  y:{ticks:{color:'#444',font:{size:10}},grid:{color:'rgba(255,255,255,0.03)'}}
+}};
+
+function renderChart(type,rows) {
   const canvas=document.getElementById('mainChart');
   if(chartInst){chartInst.destroy();chartInst=null;}
-  if(!rows.length)return;
-  const labels=rows.map(r=>{const d=new Date(r.date+'T12:00:00');return d.toLocaleDateString('en-US',{month:'short',day:'numeric'});});
-  const co={responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{color:'#555',font:{size:10}},grid:{color:'rgba(255,255,255,0.04)'}},y:{ticks:{color:'#555',font:{size:10}},grid:{color:'rgba(255,255,255,0.04)'}}}};
+  if(!rows?.length) return;
+
+  const sparse=rows.length>60?7:rows.length>30?3:1;
+  const labels=rows.map((r,i)=>{
+    if(i%sparse!==0&&i!==rows.length-1) return '';
+    const d=new Date(r.date+'T12:00:00');
+    return d.toLocaleDateString('en-US',{month:'short',day:'numeric'});
+  });
+  const pr=rows.length>30?0:3;
+  const lw=2;
+
   let cfg;
-  if(type==='weight'){cfg={type:'line',data:{labels,datasets:[{label:'Weight',data:rows.map(r=>r.weight),borderColor:'#c8ff00',backgroundColor:'rgba(200,255,0,0.05)',tension:0.3,fill:true,pointRadius:3,spanGaps:true,pointBorderColor:'#c8ff00',pointBackgroundColor:'#0a0a0a'}]},options:{...co,scales:{...co.scales,y:{...co.scales.y,ticks:{...co.scales.y.ticks,callback:v=>v+'lb'}}}}};}
-  else if(type==='deficit'){const vals=rows.map(r=>r.deficit);cfg={type:'bar',data:{labels,datasets:[{data:vals,backgroundColor:vals.map(v=>v==null?'transparent':v>=0?'rgba(93,202,165,0.7)':'rgba(240,149,149,0.7)')}]},options:{...co,scales:{...co.scales,y:{...co.scales.y,ticks:{...co.scales.y.ticks,callback:v=>v.toLocaleString()}}}}};}
-  else if(type==='cumulative'){cfg={type:'line',data:{labels,datasets:[{label:'Cum deficit',data:rows.map(r=>r.cumDef),borderColor:'#AFA9EC',backgroundColor:'rgba(175,169,236,0.05)',tension:0.3,fill:true,pointRadius:2,yAxisID:'y'},{label:'Est lbs',data:rows.map(r=>+r.estLbs.toFixed(2)),borderColor:'#5DCAA5',borderDash:[4,3],tension:0.3,pointRadius:2,yAxisID:'y2'}]},options:{...co,plugins:{legend:{display:true,labels:{color:'#666',boxWidth:10,font:{size:11}}}},scales:{x:co.scales.x,y:{position:'left',ticks:{color:'#555',font:{size:10},callback:v=>v.toLocaleString()},grid:{color:'rgba(255,255,255,0.04)'}},y2:{position:'right',grid:{drawOnChartArea:false},ticks:{color:'#555',font:{size:10},callback:v=>v+'lb'}}}}};}
-  else if(type==='protein'){cfg={type:'line',data:{labels,datasets:[{label:'Protein/lb',data:rows.map(r=>r.protPerLb),borderColor:'#c8ff00',backgroundColor:'rgba(200,255,0,0.05)',tension:0.3,fill:true,pointRadius:3,spanGaps:true},{label:'1g/lb target',data:rows.map(()=>1.0),borderColor:'rgba(240,149,149,0.4)',borderDash:[4,3],pointRadius:0,borderWidth:1}]},options:{...co,plugins:{legend:{display:false}},scales:{...co.scales,y:{...co.scales.y,ticks:{...co.scales.y.ticks,callback:v=>v.toFixed(1)+'g'}}}}};}
-  else if(type==='steps'){cfg={type:'bar',data:{labels,datasets:[{data:rows.map(r=>r.steps),backgroundColor:rows.map(r=>r.steps==null?'transparent':r.steps>=10000?'rgba(93,202,165,0.7)':r.steps>=8000?'rgba(239,159,39,0.7)':'rgba(240,149,149,0.6)')}]},options:{...co,scales:{...co.scales,y:{...co.scales.y,ticks:{...co.scales.y.ticks,callback:v=>v.toLocaleString()}}}}};}
-  else if(type==='macros'){cfg={type:'bar',data:{labels,datasets:[{label:'Protein',data:rows.map(r=>r.protein),backgroundColor:'rgba(93,202,165,0.7)',stack:'m'},{label:'Carbs',data:rows.map(r=>r.carbs),backgroundColor:'rgba(239,159,39,0.7)',stack:'m'},{label:'Fat',data:rows.map(r=>r.fat),backgroundColor:'rgba(240,149,149,0.6)',stack:'m'}]},options:{...co,plugins:{legend:{display:true,labels:{color:'#666',boxWidth:10,font:{size:11}}}},scales:{x:{...co.scales.x,stacked:true},y:{...co.scales.y,stacked:true}}}};}
-  chartInst=new Chart(canvas,cfg);
+  if(type==='weight'){
+    cfg={type:'line',data:{labels,datasets:[{data:rows.map(r=>r.weight),borderColor:'#c8ff00',backgroundColor:'rgba(200,255,0,0.04)',tension:0.35,fill:true,pointRadius:pr,spanGaps:true,borderWidth:lw}]},options:{...coBase,scales:{...coBase.scales,y:{...coBase.scales.y,ticks:{...coBase.scales.y.ticks,callback:v=>v+'lb'}}}}};
+  } else if(type==='deficit'){
+    const vals=rows.map(r=>r.deficit);
+    cfg={type:'bar',data:{labels,datasets:[{data:vals,backgroundColor:vals.map(v=>v==null?'transparent':v>=0?'rgba(93,202,165,0.65)':'rgba(240,149,149,0.65)'),borderWidth:0,borderRadius:2}]},options:{...coBase,scales:{...coBase.scales,y:{...coBase.scales.y,ticks:{...coBase.scales.y.ticks,callback:v=>v.toLocaleString()}}}}};
+  } else if(type==='cumulative'){
+    cfg={type:'line',data:{labels,datasets:[
+      {label:'Cal deficit',data:rows.map(r=>r.cumDef),borderColor:'#AFA9EC',backgroundColor:'rgba(175,169,236,0.05)',tension:0.35,fill:true,pointRadius:0,borderWidth:lw,yAxisID:'y'},
+      {label:'Est lbs',data:rows.map(r=>+r.estLbs.toFixed(2)),borderColor:'#5DCAA5',borderDash:[4,3],tension:0.35,pointRadius:0,borderWidth:lw,yAxisID:'y2'}
+    ]},options:{...coBase,plugins:{legend:{display:true,labels:{color:'#555',boxWidth:8,font:{size:10}}}},scales:{x:coBase.scales.x,y:{position:'left',ticks:{color:'#444',font:{size:10},callback:v=>v.toLocaleString()},grid:{color:'rgba(255,255,255,0.03)'}},y2:{position:'right',grid:{drawOnChartArea:false},ticks:{color:'#444',font:{size:10},callback:v=>v+'lb'}}}}};
+  } else if(type==='protein'){
+    cfg={type:'line',data:{labels,datasets:[
+      {data:rows.map(r=>r.protPerLb),borderColor:'#c8ff00',backgroundColor:'rgba(200,255,0,0.04)',tension:0.35,fill:true,pointRadius:pr,spanGaps:true,borderWidth:lw},
+      {data:rows.map(()=>1.0),borderColor:'rgba(240,149,149,0.3)',borderDash:[5,4],pointRadius:0,borderWidth:1}
+    ]},options:{...coBase,scales:{...coBase.scales,y:{...coBase.scales.y,ticks:{...coBase.scales.y.ticks,callback:v=>v.toFixed(1)+'g'}}}}};
+  } else if(type==='steps'){
+    cfg={type:'bar',data:{labels,datasets:[{data:rows.map(r=>r.steps),backgroundColor:rows.map(r=>r.steps==null?'transparent':r.steps>=10000?'rgba(93,202,165,0.65)':r.steps>=8000?'rgba(239,159,39,0.65)':'rgba(240,149,149,0.55)'),borderWidth:0,borderRadius:2}]},options:{...coBase,scales:{...coBase.scales,y:{...coBase.scales.y,ticks:{...coBase.scales.y.ticks,callback:v=>v.toLocaleString()}}}}};
+  }
+  if(cfg) chartInst=new Chart(canvas,cfg);
 }
 
-function renderWeeks() {
-  const wb=document.getElementById('weekBreakdown');
-  if(!rows.length){wb.innerHTML='<div class="empty" style="padding:1rem">No data yet</div>';return;}
-  const weeks={};
-  rows.forEach(r=>{
-    const d=new Date(r.date+'T12:00:00');
-    const wk=`Week ${Math.ceil(d.getDate()/7)}`;
-    if(!weeks[wk])weeks[wk]={defs:[],steps:[],prots:[]};
-    if(r.deficit!=null)weeks[wk].defs.push(r.deficit);
-    if(r.steps!=null)weeks[wk].steps.push(r.steps);
-    if(r.protPerLb!=null)weeks[wk].prots.push(r.protPerLb);
-  });
-  wb.innerHTML=Object.entries(weeks).map(([wk,d])=>{
-    const avgD=d.defs.length?Math.round(d.defs.reduce((a,v)=>a+v,0)/d.defs.length):null;
-    const avgS=d.steps.length?Math.round(d.steps.reduce((a,v)=>a+v,0)/d.steps.length):null;
-    const avgP=d.prots.length?(d.prots.reduce((a,v)=>a+v,0)/d.prots.length).toFixed(2):null;
-    const defCol=avgD==null?'':avgD>=1000?'var(--good)':avgD>=500?'var(--warn)':'var(--bad)';
-    return`<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:0.5px solid var(--border)">
-      <div style="font-size:13px;color:var(--muted)">${wk}</div>
-      <div style="display:flex;gap:1.5rem;font-size:12px">
-        <span style="color:${defCol}">${avgD!=null?avgD.toLocaleString()+' def':'—'}</span>
-        <span style="color:var(--muted)">${avgS!=null?avgS.toLocaleString()+' steps':'—'}</span>
-        <span style="color:${avgP>=1?'var(--good)':avgP>=0.8?'var(--warn)':'var(--muted)'}">${avgP?avgP+'g/lb':'—'}</span>
+function switchChart(type,el) {
+  activeChart=type;
+  document.querySelectorAll('.ctab').forEach(b=>b.classList.remove('active'));
+  el.classList.add('active');
+  renderChart(type,getPeriodRows(activePeriod));
+}
+
+function renderBreakdown(s,rows) {
+  const wr=rows.filter(r=>r.weight!=null);
+
+  // Weight change
+  const wtE=document.getElementById('bdWt'),wtS=document.getElementById('bdWtSub'),wtF=document.getElementById('bdWtFill');
+  if(wr.length>=2){
+    const diff=+(wr[0].weight-wr[wr.length-1].weight).toFixed(1);
+    wtE.innerHTML=(diff>0?'−':diff<0?'+':'')+Math.abs(diff)+'<span style="font-family:\'DM Sans\',sans-serif;font-size:13px;color:var(--muted);font-weight:300"> lbs</span>';
+    wtE.style.color=diff>0?'var(--good)':diff<0?'var(--bad)':'var(--muted)';
+    wtS.textContent=`${wr[0].weight} → ${wr[wr.length-1].weight} lbs`;
+    wtF.style.width=diff>0?Math.min(100,Math.abs(diff)/15*100)+'%':'8%';
+    wtF.style.background=diff>0?'var(--good)':diff<0?'var(--bad)':'var(--border)';
+  } else {wtE.textContent='—';wtS.textContent='Need 2+ weigh-ins';wtF.style.width='0%';}
+
+  // Lean mass
+  const leE=document.getElementById('bdLean'),leS=document.getElementById('bdLeanSub'),leF=document.getElementById('bdLeanFill');
+  if(s.leanScore!=null){
+    leE.innerHTML=s.leanScore+'<span style="font-family:\'DM Sans\',sans-serif;font-size:13px;color:var(--muted);font-weight:300">%</span>';
+    leE.style.color=s.leanScore>=85?'var(--good)':s.leanScore>=70?'var(--warn)':'var(--bad)';
+    leS.textContent=s.leanScore>=85?'Muscle preserved':s.leanScore>=70?'Moderate loss':'Muscle at risk';
+    leF.style.width=s.leanScore+'%';
+    leF.style.background=s.leanScore>=85?'var(--good)':s.leanScore>=70?'var(--warn)':'var(--bad)';
+  } else {leE.textContent='—';leS.textContent='Log protein + deficit data';leF.style.width='0%';}
+
+  // Step consistency
+  const sr=rows.filter(r=>r.steps!=null);
+  const above8k=sr.filter(r=>r.steps>=8000).length;
+  const stepPct=sr.length?Math.round(above8k/sr.length*100):0;
+  const stE=document.getElementById('bdStep'),stS=document.getElementById('bdStepSub'),stF=document.getElementById('bdStepFill');
+  stE.innerHTML=stepPct+'<span style="font-family:\'DM Sans\',sans-serif;font-size:13px;color:var(--muted);font-weight:300">%</span>';
+  stE.style.color=stepPct>=70?'var(--good)':stepPct>=45?'var(--warn)':'var(--bad)';
+  stS.textContent=sr.length?`${above8k} of ${sr.length} days above 8k`:'Log steps to track';
+  stF.style.width=stepPct+'%';
+  stF.style.background=stepPct>=70?'var(--good)':stepPct>=45?'var(--warn)':'var(--bad)';
+
+  // Deficit efficiency
+  const efE=document.getElementById('bdEff'),efS=document.getElementById('bdEffSub'),efF=document.getElementById('bdEffFill');
+  if(s.effPct!=null){
+    efE.innerHTML=s.effPct+'<span style="font-family:\'DM Sans\',sans-serif;font-size:13px;color:var(--muted);font-weight:300">%</span>';
+    efE.style.color=s.effPct<=10?'var(--good)':s.effPct<=20?'var(--warn)':'var(--bad)';
+    efS.textContent=s.effPct<=10?'Results match the math':s.effPct<=20?'Small tracking gap':'Check your logging';
+    efF.style.width=Math.max(5,100-Math.min(100,s.effPct))+'%';
+    efF.style.background=s.effPct<=10?'var(--good)':s.effPct<=20?'var(--warn)':'var(--bad)';
+  } else {efE.textContent='—';efS.textContent='Need 2+ weigh-ins + cal data';efF.style.width='0%';}
+}
+
+function renderPlainEnglish(s,rows) {
+  const items=[];
+
+  if(s.avgDef>0){
+    const pace=(s.avgDef*30.4/3500).toFixed(1);
+    items.push(`Average deficit of <strong>${s.avgDef.toLocaleString()} cal/day</strong> = <span class="hi">${pace} lbs of fat per month</span> at this pace`);
+  }
+  if(s.avgProt){
+    const hit=rows.filter(r=>r.protPerLb!=null&&r.protPerLb>=1).length;
+    const tot=rows.filter(r=>r.protPerLb!=null).length;
+    items.push(`Protein averaging <strong>${s.avgProt.toFixed(2)}g per lb of bodyweight</strong> — hit the 1g/lb target on <span class="hi">${hit} of ${tot} logged days</span>`);
+  }
+  if(s.loggedDays>0){
+    const note=s.consistency>=90?'elite consistency':s.consistency>=75?'solid — keep it up':s.consistency>=50?'room to improve':'needs attention';
+    items.push(`<strong>${s.loggedDays} of ${s.totalCalDays} days tracked</strong> (${s.consistency}%) — ${note}`);
+  }
+  const wr=rows.filter(r=>r.weight!=null);
+  if(wr.length>=2){
+    const diff=+(wr[0].weight-wr[wr.length-1].weight).toFixed(1);
+    if(diff>0) items.push(`Scale dropped <strong>${diff} lbs</strong> — from <span class="hi">${wr[0].weight}</span> down to <span class="hi">${wr[wr.length-1].weight} lbs</span>`);
+    else if(diff<0) items.push(`Weight up <strong>${Math.abs(diff)} lbs</strong> — audit your surplus days and water intake`);
+    else items.push(`Weight holding at <strong>${wr[0].weight} lbs</strong> — possible body recomposition happening`);
+  }
+  if(s.avgSteps){
+    const note=s.avgSteps>=10000?'crushing the 10k goal':s.avgSteps>=8000?'above the 8k daily target':'below the 8k daily target';
+    items.push(`Averaging <strong>${s.avgSteps.toLocaleString()} steps/day</strong> — ${note}`);
+  }
+  if(s.estLbs>0&&wr.length>=2){
+    const actualDiff=+(wr[0].weight-wr[wr.length-1].weight).toFixed(1);
+    if(actualDiff>0&&Math.abs(actualDiff-s.estLbs)<1)
+      items.push(`Estimated fat loss (<strong>${Math.abs(s.estLbs).toFixed(1)} lbs</strong>) closely matches your actual weight change — <span class="hi">your tracking is accurate</span>`);
+  }
+
+  const el=document.getElementById('peList');
+  el.innerHTML=items.length
+    ?items.map(t=>`<div class="pe-item"><div class="pe-dot"></div><div class="pe-text">${t}</div></div>`).join('')
+    :'<div style="font-size:13px;color:var(--muted);padding:0.5rem 0">Log more data to see your full breakdown.</div>';
+}
+
+function renderMonthCompare(months,period) {
+  const card=document.getElementById('mcCard');
+  if(period==='1MO'){card.style.display='none';return;}
+  card.style.display='block';
+
+  const list=document.getElementById('mcList');
+  list.innerHTML=months.map(mk=>{
+    const isCur=mk===curMK;
+    let lbs='—',cons=null,label=monthLabel(mk);
+    if(isCur){
+      const s=computeMonthStats(curMonthRows);
+      lbs=Math.abs(s.estLbs).toFixed(1);
+      cons=s.consistency;
+    } else {
+      const arc=allArcs.find(a=>a.month_key===mk);
+      if(arc){lbs=Math.abs(arc.est_lbs_lost||0).toFixed(1);cons=arc.consistency_pct;}
+    }
+    return`<div class="mc-row">
+      <div>
+        <div class="mc-name${isCur?' cur':''}">${label}${isCur?' (now)':''}</div>
+        <div class="mc-pills">
+          ${cons!=null?`<div class="mc-pill">Logged <span>${cons}%</span></div>`:''}
+        </div>
+      </div>
+      <div class="mc-lbs-wrap">
+        <div class="mc-lbs">${lbs}</div>
+        <div class="mc-lbs-label">est lbs</div>
       </div>
     </div>`;
   }).join('');
-}
-
-function renderArchives(arcs) {
-  const el=document.getElementById('archives');
-  if(!arcs.length){el.innerHTML='<div class="empty"><div>No past months yet</div></div>';return;}
-  el.innerHTML=arcs.map(a=>`
-    <div class="archive-card">
-      <div class="archive-month">${monthLabel(a.month_key)}</div>
-      <div class="archive-stats">
-        <div class="arch-stat">Deficit <span>${(a.total_deficit||0).toLocaleString()} cal</span></div>
-        <div class="arch-stat">Est lost <span>${(a.est_lbs_lost||0).toFixed(1)} lbs</span></div>
-        <div class="arch-stat">Consistency <span>${a.consistency_pct||0}%</span></div>
-        <div class="arch-stat">Best streak <span>${a.best_step_streak||0}d</span></div>
-        <div class="arch-stat">Avg prot <span>${a.avg_protein_per_lb||'—'}g/lb</span></div>
-      </div>
-    </div>`).join('');
-}
-
-function switchChart(type,el){
-  document.querySelectorAll('.ctab').forEach(b=>b.classList.remove('active'));
-  el.classList.add('active');
-  renderChart(type);
 }
 </script>
 </body>
