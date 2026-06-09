@@ -164,7 +164,10 @@ async function doLogin() {
     btn.textContent = 'Redirecting...';
     await redirectAfterAuth(data.user.id);
   } catch(e) {
-    err.textContent = 'Something went wrong. Try again.';
+    const msg = e.message?.toLowerCase()||'';
+    err.textContent = msg.includes('timeout') || msg.includes('fetch')
+      ? 'Cannot reach the server — the project may be paused. Try again in a moment.'
+      : 'Something went wrong. Try again.';
     btn.disabled = false;
     btn.textContent = 'Log in';
   }
@@ -244,7 +247,10 @@ async function doSignup() {
 
   } catch(e) {
     console.error('Signup error:', e);
-    err.textContent = 'Something went wrong. Try again.';
+    const msg = e.message?.toLowerCase()||'';
+    err.textContent = msg.includes('timeout') || msg.includes('fetch')
+      ? 'Cannot reach the server — the project may be paused. Try again in a moment.'
+      : 'Something went wrong. Try again.';
     btn.disabled = false;
     btn.textContent = 'Create account';
   }
