@@ -7,6 +7,16 @@
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
 <link rel="stylesheet" href="/css/shared.css"/>
+<style>
+.health-card-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem}
+.health-status-dot{width:7px;height:7px;border-radius:50%;background:var(--muted);display:inline-block;margin-right:5px;flex-shrink:0}
+.health-status-dot.connected{background:var(--accent)}
+.token-input{width:100%;font-size:12px;padding:10px 12px;background:#0f0f0f;border:0.5px solid var(--border);color:var(--white);font-family:'DM Sans',sans-serif;outline:none;letter-spacing:0.03em;cursor:text}
+.step-item{padding:12px 0;border-bottom:0.5px solid rgba(255,255,255,0.04);display:flex;gap:12px}
+.step-item:last-child{border-bottom:none}
+.step-num{width:20px;height:20px;border-radius:50%;background:rgba(200,255,0,0.08);border:0.5px solid rgba(200,255,0,0.2);font-size:11px;color:var(--accent);display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px}
+.step-body code{font-size:11px;background:rgba(255,255,255,0.07);padding:1px 5px;font-family:monospace;border-radius:2px;color:var(--accent)}
+</style>
 </head>
 <body>
 <div class="page-header">
@@ -49,6 +59,49 @@
       <button class="btn btn-accent" onclick="saveProfile()">Save changes</button>
     </div>
 
+    <!-- ─── Apple Health Sync ─────────────────────────── -->
+    <div class="card">
+      <div class="health-card-header">
+        <div class="card-title">Apple Health Sync</div>
+        <div id="syncStatusLabel" style="font-size:11px;color:var(--muted);display:flex;align-items:center">
+          <span class="health-status-dot" id="syncDot"></span><span id="syncStatusText">Not connected</span>
+        </div>
+      </div>
+
+      <!-- Not set up state -->
+      <div id="syncNotSetup">
+        <p style="font-size:13px;color:var(--muted);margin-bottom:1.25rem;line-height:1.65">
+          Auto-sync steps, calories burned, run distance and workout minutes from Apple Health every night. Zero manual input — your logs fill themselves.
+        </p>
+        <button class="btn btn-accent" onclick="generateSyncToken()">Generate sync key</button>
+      </div>
+
+      <!-- Set up state -->
+      <div id="syncSetup" style="display:none">
+
+        <!-- Token display -->
+        <div style="margin-bottom:1.25rem">
+          <div style="font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);margin-bottom:7px">Your sync key</div>
+          <div style="display:flex;gap:7px;align-items:center">
+            <input class="token-input" id="syncTokenDisplay" readonly/>
+            <button class="btn btn-sm" onclick="copySyncToken()">Copy</button>
+          </div>
+          <div style="font-size:11px;color:rgba(255,255,255,0.25);margin-top:6px">Keep this private — it authorises writes to your logs.</div>
+        </div>
+
+        <!-- Setup guide -->
+        <div style="font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);margin-bottom:0.75rem">iOS Shortcut setup — once, ~10 min</div>
+        <div id="setupSteps"></div>
+
+        <!-- Actions row -->
+        <div style="display:flex;gap:8px;margin-top:1.25rem;flex-wrap:wrap">
+          <button class="btn btn-sm btn-accent" onclick="testSync()">Test connection</button>
+          <button class="btn btn-sm" style="color:var(--bad);border-color:rgba(240,149,149,0.3)" onclick="revokeSyncToken()">Revoke key</button>
+        </div>
+      </div>
+    </div>
+    <!-- ─────────────────────────────────────────────── -->
+
     <!-- Current month summary -->
     <div class="card">
       <div class="card-title" style="margin-bottom:1rem">This month</div>
@@ -66,10 +119,10 @@
       <div id="archiveList"><div class="empty" style="padding:1rem 0">No past months archived yet</div></div>
     </div>
 
-    <!-- Danger zone -->
+    <!-- Sign out -->
     <div style="margin-bottom:2rem;padding:1rem;border:0.5px solid rgba(240,149,149,0.2)">
       <div style="font-size:13px;color:var(--bad);margin-bottom:0.5rem">Sign out</div>
-      <div style="font-size:12px;color:var(--muted);margin-bottom:0.75rem">Your data is saved to your account and will be here when you come back.</div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:0.75rem">Your data is saved and will be here when you come back.</div>
       <button class="btn btn-sm" onclick="signOut()" style="color:var(--bad);border-color:rgba(240,149,149,0.3)">Sign out</button>
     </div>
 
@@ -82,42 +135,50 @@
 <script src="/js/nav.js"></script>
 <script src="/js/levels.js"></script>
 <script>
-const sb=getClient();
-const curMK=monthKey();
+const sb = getClient();
+const curMK = monthKey();
 let uid;
 
 (async()=>{
-  const session=await requireAuth();if(!session)return;
-  uid=session.user.id;
-  const profile=await getProfile();
-  if(!profile?.name){window.location.href='/onboarding.html';return;}
+  const session = await requireAuth(); if(!session) return;
+  uid = session.user.id;
+  const profile = await getProfile();
+  if(!profile?.name){ window.location.href='/onboarding.html'; return; }
 
-  // fill profile
-  const initials=(profile.name||'?').split(' ').map(p=>p[0]).join('').substring(0,2).toUpperCase();
-  document.getElementById('avatar').textContent=initials;
-  document.getElementById('profileName').textContent=profile.name||'';
-  document.getElementById('profileEmail').textContent=session.user.email||'';
-  const te=document.getElementById('profileTier');
-  const ld=genLevel(profile.current_level||1);
-  te.textContent=`Level ${profile.current_level||1} — ${ld.name}`;
-  te.className='level-badge '+tierClass(ld.tier);
+  // Fill avatar + header
+  const initials = (profile.name||'?').split(' ').map(p=>p[0]).join('').substring(0,2).toUpperCase();
+  document.getElementById('avatar').textContent = initials;
+  document.getElementById('profileName').textContent = profile.name||'';
+  document.getElementById('profileEmail').textContent = session.user.email||'';
+  const te = document.getElementById('profileTier');
+  const ld = genLevel(profile.current_level||1);
+  te.textContent = `Level ${profile.current_level||1} — ${ld.name}`;
+  te.className = 'level-badge '+tierClass(ld.tier);
 
-  document.getElementById('fName').value=profile.name||'';
-  document.getElementById('fBw').value=profile.bodyweight||'';
-  document.getElementById('fTdee').value=profile.tdee||'';
-  document.getElementById('fProt').value=profile.protein_target||'';
-  document.getElementById('fGoal').value=profile.goal||'';
-  document.getElementById('sLevel').textContent=profile.current_level||1;
+  // Fill form
+  document.getElementById('fName').value = profile.name||'';
+  document.getElementById('fBw').value = profile.bodyweight||'';
+  document.getElementById('fTdee').value = profile.tdee||'';
+  document.getElementById('fProt').value = profile.protein_target||'';
+  document.getElementById('fGoal').value = profile.goal||'';
+  document.getElementById('sLevel').textContent = profile.current_level||1;
 
-  const {data:logs}=await sb.from('daily_logs').select('*').eq('user_id',uid).eq('month_key',curMK);
-  const rows=computeRows(logs||[]);
-  const daysLogged=rows.filter(r=>r.cal_in!=null||r.weight!=null).length;
-  const last=rows[rows.length-1];
-  document.getElementById('sDays').textContent=daysLogged;
-  document.getElementById('sCumDef').innerHTML=last?(last.cumDef/1000).toFixed(1)+'<span class="stat-unit">k</span>':'—';
-  document.getElementById('sEstLbs').innerHTML=last?Math.abs(last.estLbs).toFixed(1)+'<span class="stat-unit">lbs</span>':'—';
+  // Sync token state
+  if(profile.sync_token) {
+    showSyncSetup(profile.sync_token);
+  }
 
-  const {data:arcs}=await sb.from('monthly_archives').select('*').eq('user_id',uid).order('month_key',{ascending:false});
+  // This month stats
+  const {data:logs} = await sb.from('daily_logs').select('*').eq('user_id',uid).eq('month_key',curMK);
+  const rows = computeRows(logs||[]);
+  const daysLogged = rows.filter(r=>r.cal_in!=null||r.weight!=null).length;
+  const last = rows[rows.length-1];
+  document.getElementById('sDays').textContent = daysLogged;
+  document.getElementById('sCumDef').innerHTML = last?(last.cumDef/1000).toFixed(1)+'<span class="stat-unit">k</span>':'—';
+  document.getElementById('sEstLbs').innerHTML = last?Math.abs(last.estLbs).toFixed(1)+'<span class="stat-unit">lbs</span>':'—';
+
+  // Archives
+  const {data:arcs} = await sb.from('monthly_archives').select('*').eq('user_id',uid).order('month_key',{ascending:false});
   renderArchives(arcs||[]);
 
   document.getElementById('loader').style.display='none';
@@ -125,25 +186,134 @@ let uid;
   injectNav('profile');
 })();
 
+// ─── Apple Health sync ──────────────────────────────────
+
+async function generateSyncToken() {
+  const token = crypto.randomUUID();
+  const {error} = await sb.from('profiles').update({sync_token:token}).eq('id',uid);
+  if(error){ toast('Error generating key','error'); return; }
+  showSyncSetup(token);
+  toast('Sync key generated');
+}
+
+function showSyncSetup(token) {
+  document.getElementById('syncNotSetup').style.display = 'none';
+  document.getElementById('syncSetup').style.display = 'block';
+  document.getElementById('syncTokenDisplay').value = token;
+  document.getElementById('syncDot').classList.add('connected');
+  document.getElementById('syncStatusText').textContent = 'Connected';
+  document.getElementById('syncStatusLabel').style.color = 'var(--accent)';
+  renderSyncGuide(token);
+}
+
+function copySyncToken() {
+  const token = document.getElementById('syncTokenDisplay').value;
+  navigator.clipboard.writeText(token).then(()=>toast('Sync key copied to clipboard'));
+}
+
+async function revokeSyncToken() {
+  if(!confirm('Revoke this sync key? Your Shortcut will stop syncing until you generate a new one.')) return;
+  await sb.from('profiles').update({sync_token:null}).eq('id',uid);
+  document.getElementById('syncSetup').style.display = 'none';
+  document.getElementById('syncNotSetup').style.display = 'block';
+  document.getElementById('syncDot').classList.remove('connected');
+  document.getElementById('syncStatusText').textContent = 'Not connected';
+  document.getElementById('syncStatusLabel').style.color = 'var(--muted)';
+  toast('Sync key revoked');
+}
+
+async function testSync() {
+  const token = document.getElementById('syncTokenDisplay').value;
+  const today = new Date().toISOString().split('T')[0];
+  try {
+    const res = await fetch(`${SUPABASE_URL}/functions/v1/health-sync`,{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({sync_token:token,date:today,steps:1,active_calories:1,resting_calories:1})
+    });
+    const d = await res.json();
+    if(d.success) toast('Connection ✓ — Shortcut can reach Shred System');
+    else toast('Test failed: '+(d.error||'unknown'),'error');
+  } catch(e) {
+    toast('Test failed — check network','error');
+  }
+}
+
+function renderSyncGuide(token) {
+  const url = `${SUPABASE_URL}/functions/v1/health-sync`;
+  const steps = [
+    {
+      title: 'Copy your sync key above',
+      body: 'This is your personal auth token — paste it exactly into step 5.'
+    },
+    {
+      title: 'Open Shortcuts app → "+" → Name it <b>Shred Sync</b>',
+      body: ''
+    },
+    {
+      title: 'Add Action: <b>Format Date</b>',
+      body: 'Date: Current Date · Format: Custom · type <code>yyyy-MM-dd</code> · Add to variable → name it <code>today</code>'
+    },
+    {
+      title: 'Add 5× <b>Find Health Samples</b> actions',
+      body: 'For each one: set Date filter → "is today", Summarize → Sum, then set the variable name.<br><br>' +
+            '<b>Category → Variable</b><br>' +
+            'Steps → <code>my_steps</code><br>' +
+            'Active Energy Burned → <code>active_cal</code><br>' +
+            'Resting Energy → <code>resting_cal</code><br>' +
+            'Walking+Running Distance (miles) → <code>run_miles</code><br>' +
+            'Exercise Time → <code>workout_mins</code>'
+    },
+    {
+      title: 'Add Action: <b>Get Contents of URL</b>',
+      body: `URL: <code style="word-break:break-all">${url}</code><br>` +
+            'Method: <b>POST</b> · Request Body: <b>JSON</b><br><br>' +
+            'Add 7 key/value pairs (tap "+"):<br>' +
+            '<code>sync_token</code> → paste your key<br>' +
+            '<code>date</code> → Variable: today<br>' +
+            '<code>steps</code> → Variable: my_steps<br>' +
+            '<code>active_calories</code> → Variable: active_cal<br>' +
+            '<code>resting_calories</code> → Variable: resting_cal<br>' +
+            '<code>distance_miles</code> → Variable: run_miles<br>' +
+            '<code>workout_minutes</code> → Variable: workout_mins'
+    },
+    {
+      title: 'Automate — runs every night at 11:30 PM',
+      body: 'Automation tab → "+" → Personal Automation → Time of Day → <b>11:30 PM</b> → Daily → Add action: Run Shortcut → <b>Shred Sync</b> → toggle <b>OFF</b> "Ask Before Running" → Done.'
+    }
+  ];
+
+  document.getElementById('setupSteps').innerHTML = steps.map((s,i)=>`
+    <div class="step-item">
+      <div class="step-num">${i+1}</div>
+      <div>
+        <div style="font-size:13px;font-weight:500;margin-bottom:${s.body?'5px':'0'};line-height:1.45">${s.title}</div>
+        ${s.body?`<div class="step-body" style="font-size:11px;color:var(--muted);line-height:1.75">${s.body}</div>`:''}
+      </div>
+    </div>`).join('');
+}
+
+// ─── Profile save ───────────────────────────────────────
+
 async function saveProfile() {
-  const updates={
-    name:document.getElementById('fName').value.trim(),
-    bodyweight:parseFloat(document.getElementById('fBw').value)||null,
-    tdee:parseInt(document.getElementById('fTdee').value)||null,
-    protein_target:parseInt(document.getElementById('fProt').value)||null,
-    goal:document.getElementById('fGoal').value||null
+  const updates = {
+    name:           document.getElementById('fName').value.trim(),
+    bodyweight:     parseFloat(document.getElementById('fBw').value)||null,
+    tdee:           parseInt(document.getElementById('fTdee').value)||null,
+    protein_target: parseInt(document.getElementById('fProt').value)||null,
+    goal:           document.getElementById('fGoal').value||null
   };
-  const {error}=await sb.from('profiles').update(updates).eq('id',uid);
-  if(error){toast('Error saving','error');return;}
+  const {error} = await sb.from('profiles').update(updates).eq('id',uid);
+  if(error){ toast('Error saving','error'); return; }
   toast('Profile saved');
-  document.getElementById('profileName').textContent=updates.name;
-  document.getElementById('avatar').textContent=updates.name.split(' ').map(p=>p[0]).join('').substring(0,2).toUpperCase();
+  document.getElementById('profileName').textContent = updates.name;
+  document.getElementById('avatar').textContent = updates.name.split(' ').map(p=>p[0]).join('').substring(0,2).toUpperCase();
 }
 
 function renderArchives(arcs) {
-  const el=document.getElementById('archiveList');
-  if(!arcs.length){el.innerHTML='<div class="empty" style="padding:0.5rem 0;text-align:left;font-size:13px;color:var(--muted)">No past months yet</div>';return;}
-  el.innerHTML=arcs.map(a=>`
+  const el = document.getElementById('archiveList');
+  if(!arcs.length){ el.innerHTML='<div class="empty" style="padding:0.5rem 0;text-align:left;font-size:13px;color:var(--muted)">No past months yet</div>'; return; }
+  el.innerHTML = arcs.map(a=>`
     <div style="padding:10px 0;border-bottom:0.5px solid var(--border)">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
         <div style="font-size:14px;font-weight:500">${monthLabel(a.month_key)}</div>
