@@ -95,7 +95,11 @@
 
         <!-- Actions row -->
         <div style="display:flex;gap:8px;margin-top:1.25rem;flex-wrap:wrap">
-          <button class="btn btn-sm btn-accent" onclick="testSync()">Test connection</button>
+          <button class="btn btn-sm btn-accent" onclick="downloadShortcut()" style="font-size:13px;padding:10px 16px">⬇ Download Shortcut for iPhone</button>
+        </div>
+        <div style="font-size:11px;color:rgba(255,255,255,0.25);margin-top:6px">Tap on your iPhone → Open in Shortcuts → Add Shortcut → set 11:30 PM automation</div>
+        <div style="display:flex;gap:8px;margin-top:0.75rem;flex-wrap:wrap">
+          <button class="btn btn-sm" onclick="testSync()">Test connection</button>
           <button class="btn btn-sm" style="color:var(--bad);border-color:rgba(240,149,149,0.3)" onclick="revokeSyncToken()">Revoke key</button>
         </div>
       </div>
@@ -220,6 +224,144 @@ async function revokeSyncToken() {
   document.getElementById('syncStatusText').textContent = 'Not connected';
   document.getElementById('syncStatusLabel').style.color = 'var(--muted)';
   toast('Sync key revoked');
+}
+
+function downloadShortcut() {
+  const token = document.getElementById('syncTokenDisplay').value;
+  if(!token){ toast('Generate your sync key first','error'); return; }
+  const endpoint = `${SUPABASE_URL}/functions/v1/health-sync`;
+
+  // Helper: text token string (plain string value)
+  const txt = s => `<dict>
+        <key>Value</key><dict><key>string</key><string>${s}</string></dict>
+        <key>WFSerializationType</key><string>WFTextTokenString</string>
+      </dict>`;
+
+  // Helper: magic variable reference (output of a previous action by UUID)
+  const varRef = (uuid, name) => `<dict>
+        <key>Value</key><dict>
+          <key>attachmentsByRange</key><dict>
+            <key>{0, 1}</key><dict>
+              <key>OutputName</key><string>${name}</string>
+              <key>OutputUUID</key><string>${uuid}</string>
+              <key>Type</key><string>ActionOutput</string>
+            </dict>
+          </dict>
+          <key>string</key><string>&#xFFFC;</string>
+        </dict>
+        <key>WFSerializationType</key><string>WFTextTokenString</string>
+      </dict>`;
+
+  // Helper: one JSON key-value row in the POST body
+  const jsonRow = (key, valXml) => `<dict>
+      <key>WFItemType</key><integer>0</integer>
+      <key>WFKey</key>${txt(key)}
+      <key>WFValue</key>${valXml}
+    </dict>`;
+
+  // Helper: Find Health Samples action
+  const healthAction = (uuid, hkId, outputName) => `<dict>
+    <key>WFWorkflowActionIdentifier</key>
+    <string>is.workflow.actions.health.quantitysamples</string>
+    <key>WFWorkflowActionParameters</key><dict>
+      <key>CustomOutputName</key><string>${outputName}</string>
+      <key>UUID</key><string>${uuid}</string>
+      <key>WFHealthCategoryKey</key><string>${hkId}</string>
+      <key>WFHealthStartDate</key><dict>
+        <key>Value</key><dict>
+          <key>WFDateOffsetValue</key><real>0</real>
+          <key>WFDateOffsetUnit</key><string>Days</string>
+          <key>WFDateType</key><string>Start of Day</string>
+        </dict>
+        <key>WFSerializationType</key><string>WFDateFieldValue</string>
+      </dict>
+      <key>WFHealthEndDate</key><dict>
+        <key>Value</key><dict>
+          <key>WFDateOffsetValue</key><real>0</real>
+          <key>WFDateOffsetUnit</key><string>Days</string>
+          <key>WFDateType</key><string>End of Day</string>
+        </dict>
+        <key>WFSerializationType</key><string>WFDateFieldValue</string>
+      </dict>
+      <key>WFHealthAggregationMode</key><string>Sum</string>
+    </dict>
+  </dict>`;
+
+  const U = n => `550E8400-E29B-41D4-A716-44665544000${n}`;
+
+  const plist = `<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>WFWorkflowName</key><string>Shred Sync</string>
+  <key>WFWorkflowClientVersion</key><string>1185.1</string>
+  <key>WFWorkflowMinimumClientVersion</key><integer>900</integer>
+  <key>WFWorkflowMinimumClientVersionString</key><string>900</string>
+  <key>WFWorkflowHasShortcutInputVariables</key><false/>
+  <key>WFWorkflowInputContentItemClasses</key><array/>
+  <key>WFWorkflowOutputContentItemClasses</key><array/>
+  <key>WFWorkflowActions</key>
+  <array>
+
+    <!-- 1: Format today as yyyy-MM-dd -->
+    <dict>
+      <key>WFWorkflowActionIdentifier</key>
+      <string>is.workflow.actions.format.date</string>
+      <key>WFWorkflowActionParameters</key><dict>
+        <key>CustomOutputName</key><string>today</string>
+        <key>UUID</key><string>${U(1)}</string>
+        <key>WFDateFormatStyle</key><string>Custom</string>
+        <key>WFDateFormat</key><string>yyyy-MM-dd</string>
+      </dict>
+    </dict>
+
+    <!-- 2-6: Health samples -->
+    ${healthAction(U(2),'HKQuantityTypeIdentifierStepCount','my_steps')}
+    ${healthAction(U(3),'HKQuantityTypeIdentifierActiveEnergyBurned','active_cal')}
+    ${healthAction(U(4),'HKQuantityTypeIdentifierBasalEnergyBurned','resting_cal')}
+    ${healthAction(U(5),'HKQuantityTypeIdentifierDistanceWalkingRunning','run_miles')}
+    ${healthAction(U(6),'HKQuantityTypeIdentifierAppleExerciseTime','workout_mins')}
+
+    <!-- 7: POST to Shred System -->
+    <dict>
+      <key>WFWorkflowActionIdentifier</key>
+      <string>is.workflow.actions.downloadurl</string>
+      <key>WFWorkflowActionParameters</key><dict>
+        <key>UUID</key><string>${U(7)}</string>
+        <key>WFURL</key><string>${endpoint}</string>
+        <key>WFHTTPMethod</key><string>POST</string>
+        <key>WFHTTPBodyType</key><string>JSON</string>
+        <key>WFJSONValues</key><dict>
+          <key>Value</key><dict>
+            <key>WFDictionaryFieldValues</key>
+            <array>
+              ${jsonRow('sync_token', txt(token))}
+              ${jsonRow('date',             varRef(U(1),'today'))}
+              ${jsonRow('steps',            varRef(U(2),'my_steps'))}
+              ${jsonRow('active_calories',  varRef(U(3),'active_cal'))}
+              ${jsonRow('resting_calories', varRef(U(4),'resting_cal'))}
+              ${jsonRow('distance_miles',   varRef(U(5),'run_miles'))}
+              ${jsonRow('workout_minutes',  varRef(U(6),'workout_mins'))}
+            </array>
+          </dict>
+          <key>WFSerializationType</key><string>WFDictionaryFieldValue</string>
+        </dict>
+      </dict>
+    </dict>
+
+  </array>
+</dict>
+</plist>`;
+
+  const blob = new Blob([plist], { type: 'application/octet-stream' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'Shred-Sync.shortcut';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(a.href);
+  toast('Shortcut downloaded — open on iPhone');
 }
 
 async function testSync() {
